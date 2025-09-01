@@ -55,7 +55,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import time
 import os
 
-# --- 1. 准备模型和数据 ---
+#1. 准备模型和数据 ---
 model_name = "distilbert-base-uncased-finetuned-sst-2-english"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 # 加载原始的 FP32 模型
@@ -67,7 +67,7 @@ text = "This is a great library and I love using it!"
 inputs = tokenizer(text, return_tensors="pt")
 
 
-# --- 2. 评估原始 FP32 模型的性能 ---
+#2. 评估原始 FP32 模型的性能 ---
 
 # 测量模型大小
 torch.save(fp32_model.state_dict(), "fp32_model.pth")
@@ -84,7 +84,7 @@ fp32_latency = (end_time - start_time) * 10 # ms per inference (1000/100)
 print(f"原始 FP32 模型平均延迟: {fp32_latency:.2f} ms")
 
 
-# --- 3. 应用动态量化 (转换为 INT8) ---
+#3. 应用动态量化 (转换为 INT8) ---
 
 # 这是最简单的一种 PTQ，主要对线性层和循环神经网络层进行量化
 # `torch.quantization.quantize_dynamic` 会自动完成所有工作
@@ -96,7 +96,7 @@ quantized_model = torch.quantization.quantize_dynamic(
 quantized_model.eval()
 
 
-# --- 4. 评估量化后 INT8 模型的性能 ---
+#4. 评估量化后 INT8 模型的性能 ---
 
 # 测量模型大小
 torch.save(quantized_model.state_dict(), "quantized_model.pth")
@@ -113,7 +113,7 @@ quantized_latency = (end_time - start_time) * 10 # ms per inference
 print(f"量化后 INT8 模型平均延迟: {quantized_latency:.2f} ms")
 
 
-# --- 5. 打印优化结果 ---
+#5. 打印优化结果 ---
 print("\n--- 优化结果总结 ---")
 print(f"模型大小压缩率: {fp32_size / quantized_size:.2f}x")
 print(f"推理加速比: {fp32_latency / quantized_latency:.2f}x")
