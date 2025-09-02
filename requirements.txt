@@ -1,0 +1,15 @@
+# Requirements for Transformer Implementation
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+torch>=2.0.0
+numpy>=1.21.0
+
+# Optional dependencies for better performance
+# Uncomment if you have CUDA support:
+# torch>=2.0.0+cu118 --index-url https://download.pytorch.org/whl/cu118
+
+# For development and testing
+pytest>=7.0.0
+matplotlib>=3.5.0  # For visualization (optional)
+
