@@ -1,5 +1,5 @@
 
-# Question 8: Design an Evaluation Framework for Generative Models
+# Question : Design an Evaluation Framework for Generative Models
 
 ## 题目
 设计一个评估生成模型质量的框架，包括自动化指标和人工评估方法。
