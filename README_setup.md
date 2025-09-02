@@ -1,6 +1,9 @@
-# Transformer Implementation Setup
+# LLM Interview Preparation Setup
 
-This directory contains a complete implementation of the Transformer's attention mechanism with both PyTorch and NumPy versions.
+This directory contains complete implementations for LLM interview preparation, including:
+- Transformer attention mechanism (PyTorch and NumPy)
+- Memory-efficient training algorithms
+- Model evaluation framework
 
 ## Quick Setup
 
@@ -35,42 +38,72 @@ setup_environment.bat
    transformer_env\Scripts\activate.bat
    ```
 
-3. **Install dependencies:**
+3. **Install dependencies (if needed):**
    ```bash
    pip install -r requirements.txt
    ```
+   Note: The automated setup script installs all dependencies automatically.
 
 ## Running the Code
 
-Once the environment is set up and activated:
+Once the environment is set up and activated, you can run any of the implementations:
 
 ```bash
+# Transformer attention mechanism
 python transformer_implementation.py
+
+# Memory-efficient training algorithms
+python openAI_memory_efficient_training.py
+
+# Model evaluation framework
+python openAI_evaluation_framework.py
 ```
 
-This will run:
-- ✅ PyTorch implementation demo
-- ✅ NumPy implementation demo  
-- ✅ Attention mechanism analysis
-- ✅ Complexity analysis
+Each implementation includes:
+- ✅ Complete working code with demos
+- ✅ Educational examples and analysis
+- ✅ Performance benchmarking
+- ✅ Comprehensive documentation
 
 ## Files Included
 
-- `transformer_implementation.py` - Complete implementation with demos
-- `transformer.md` - Detailed explanation and theory
-- `setup_environment.sh` - Automated setup for macOS/Linux
-- `setup_environment.bat` - Automated setup for Windows
-- `requirements.txt` - Python dependencies
+### Core Implementations
+- `transformer_implementation.py` - Transformer attention mechanism
+- `openAI_memory_efficient_training.py` - Memory-efficient training algorithms
+- `openAI_evaluation_framework.py` - Model evaluation framework
+
+### Documentation
+- `transformer.md` - Transformer theory and implementation
+- `openAI_memory_efficient_training.md` - Memory optimization techniques
+- `openAI_evaluation_framework.md` - Evaluation framework theory
+
+### Setup Scripts
+- `setup_environment.sh` - Complete automated setup for macOS/Linux
+- `setup_environment.bat` - Complete automated setup for Windows
+- `requirements.txt` - All Python dependencies
 - `README_setup.md` - This setup guide
 
 ## What You'll Learn
 
-The implementation demonstrates:
+The implementations demonstrate:
+
+### Transformer Attention Mechanism
 - **Scaled Dot-Product Attention** - The core attention mechanism
 - **Multi-Head Attention** - Parallel attention heads
 - **Both PyTorch and NumPy** - Framework vs. pure math implementations
 - **Complexity Analysis** - Time and space complexity understanding
-- **Shape Verification** - Understanding tensor dimensions
+
+### Memory-Efficient Training
+- **Mixed Precision Training** - FP16/FP32 optimization
+- **Gradient Checkpointing** - Memory vs. computation trade-offs
+- **Model Sharding** - ZeRO and FSDP techniques
+- **Performance Benchmarking** - Real-world memory usage analysis
+
+### Model Evaluation Framework
+- **Automated Metrics** - BLEU, ROUGE, BERTScore, Perplexity
+- **Human Evaluation** - A/B testing, Likert ratings, red teaming
+- **Online Evaluation** - Implicit signals, user feedback analysis
+- **Comprehensive Reporting** - Multi-dimensional assessment
 
 ## Requirements
 
