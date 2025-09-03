@@ -1,5 +1,4 @@
-好的，這張圖實際上不是一個單一的問題，而是一個系統設計題 (System Design) 的大綱，要求你從高階架構到技術細節，完整地闡述如何實現 Anthropic 的核心訓練流程。
-下面我將把這個大綱視為一個完整的系統設計問題，並為您提供詳細的解答和概念性的程式碼範例。
+
 題目 (The Question)
 "Design the end-to-end system for training a large language model using the Constitutional AI framework. Cover the high-level architecture and key technical implementation details."
 (請設計一個端到端的系統，用於通過 Constitutional AI 框架訓練一個大型語言模型。請涵蓋高階架構設計和關鍵的技術實現細節。)
