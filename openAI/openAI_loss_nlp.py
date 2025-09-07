@@ -1,87 +1,319 @@
+#!/usr/bin/env python3
+"""
+OpenAI Interview Question 1: Custom Loss Functions for NLP Tasks
+
+This comprehensive module implements various custom loss functions specifically designed
+for Natural Language Processing tasks. It addresses common challenges in NLP such as
+class imbalance, overconfidence, gradient issues, and numerical stability.
+
+Key Features:
+- Focal Loss for handling extreme class imbalance
+- Label Smoothing for reducing overconfidence
+- Contrastive Loss for learning semantic representations
+- Dice Loss for sequence labeling tasks
+- Weighted Cross Entropy for balanced training
+- Triplet Loss for metric learning
+- Asymmetric Loss for handling label noise
+- Supervised Contrastive Loss for better representations
+
+Technical Highlights:
+- Numerical stability considerations throughout
+- Gradient analysis and monitoring
+- Class imbalance demonstration
+- Comprehensive testing and validation
+
+Author: Jianfeng Ren
+Date: 09/07/2025
+Version: 2.0
+"""
+
+# Standard library imports
+import warnings
+warnings.filterwarnings('ignore')
+
+# Third-party imports
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.autograd import Variable
 from sklearn.metrics import f1_score
-import warnings
-warnings.filterwarnings('ignore')
 
 class FocalLoss(nn.Module):
     """
-    Focal Loss for addressing class imbalance
-    论文: Focal Loss for Dense Object Detection
-    适用于: 文本分类、命名实体识别等不平衡任务
+    Focal Loss for addressing extreme class imbalance in NLP tasks.
+    
+    This loss function is particularly effective for scenarios where there's a severe
+    class imbalance, such as in named entity recognition, sentiment analysis with
+    rare categories, or any classification task where the majority class dominates.
+    
+    Mathematical Formula:
+    FL(p_t) = -α_t * (1 - p_t)^γ * log(p_t)
+    
+    Where:
+    - p_t is the predicted probability for the true class
+    - α_t is the weighting factor for rare classes
+    - γ (gamma) is the focusing parameter that down-weights easy examples
+    
+    Key Benefits:
+    1. Automatically down-weights easy examples (high confidence predictions)
+    2. Focuses learning on hard examples (low confidence predictions)
+    3. Reduces the contribution of well-classified examples to the loss
+    4. Particularly effective when γ > 1 (typically 2.0 works well)
+    
+    Paper Reference: "Focal Loss for Dense Object Detection" (Lin et al., ICCV 2017)
+    Applications: Text classification, NER, sentiment analysis, spam detection
+    
+    Args:
+        alpha (float): Weighting factor for rare classes. Default: 1.0
+        gamma (float): Focusing parameter. Higher values focus more on hard examples. Default: 2.0
+        reduction (str): Specifies the reduction to apply to the output. Options: 'mean', 'sum', 'none'
     """
+    
     def __init__(self, alpha=1, gamma=2, reduction='mean'):
+        """
+        Initialize the Focal Loss.
+        
+        Args:
+            alpha (float): Weighting factor for rare classes. 
+                          Can be a single value or a tensor of size C (number of classes).
+                          Default: 1.0
+            gamma (float): Focusing parameter. Higher values (γ > 1) focus more on hard examples.
+                          Typical values: 1.0-3.0. Default: 2.0
+            reduction (str): Specifies the reduction to apply to the output.
+                           Options: 'mean', 'sum', 'none'. Default: 'mean'
+        """
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
         
+        # Validate parameters
+        if gamma < 0:
+            raise ValueError(f"Gamma should be non-negative, got {gamma}")
+        if reduction not in ['mean', 'sum', 'none']:
+            raise ValueError(f"Reduction should be 'mean', 'sum', or 'none', got {reduction}")
+        
     def forward(self, inputs, targets):
         """
+        Forward pass of the Focal Loss.
+        
         Args:
-            inputs: 预测logits, shape (N, C)
-            targets: 真实标签, shape (N,)
+            inputs (torch.Tensor): Predicted logits from the model.
+                                 Shape: (N, C) where N is batch size, C is number of classes
+            targets (torch.Tensor): Ground truth class indices.
+                                  Shape: (N,) where each value is in [0, C-1]
+        
+        Returns:
+            torch.Tensor: Computed focal loss. Shape depends on reduction:
+                         - 'mean': scalar tensor
+                         - 'sum': scalar tensor  
+                         - 'none': (N,) tensor with loss for each sample
+        
+        Note:
+            The implementation uses numerical stability techniques:
+            - Uses log_softmax internally via cross_entropy
+            - Avoids direct computation of log probabilities
+            - Handles edge cases where pt approaches 0 or 1
         """
+        # Compute cross entropy loss for each sample (no reduction)
+        # This internally uses log_softmax for numerical stability
         ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        
+        # Convert to probabilities: pt = exp(-ce_loss) = p_t (probability of true class)
+        # This is numerically stable because cross_entropy already uses log_softmax
         pt = torch.exp(-ce_loss)
+        
+        # Compute focal loss: FL = α * (1 - pt)^γ * CE
+        # (1 - pt)^γ down-weights easy examples (high pt) more than hard examples (low pt)
         focal_loss = self.alpha * (1 - pt) ** self.gamma * ce_loss
         
+        # Apply reduction
         if self.reduction == 'mean':
             return focal_loss.mean()
         elif self.reduction == 'sum':
             return focal_loss.sum()
-        else:
+        else:  # 'none'
             return focal_loss
 
 class LabelSmoothingLoss(nn.Module):
     """
-    Label Smoothing Loss for reducing overconfidence
-    适用于: 文本分类、机器翻译等任务
+    Label Smoothing Loss for reducing overconfidence in neural networks.
+    
+    Label smoothing is a regularization technique that prevents the model from becoming
+    overconfident in its predictions. Instead of using hard labels (one-hot vectors),
+    it uses soft labels that distribute probability mass across all classes.
+    
+    Mathematical Formula:
+    For true class t and smoothing parameter α:
+    - True class gets probability: (1 - α)
+    - All other classes get probability: α / (K - 1)
+    where K is the number of classes.
+    
+    Key Benefits:
+    1. Prevents overfitting by reducing overconfidence
+    2. Improves generalization performance
+    3. Reduces the gap between training and validation accuracy
+    4. Particularly effective in text classification and machine translation
+    5. Acts as a form of regularization without additional parameters
+    
+    Paper Reference: "Rethinking the Inception Architecture for Computer Vision" (Szegedy et al., CVPR 2016)
+    Applications: Text classification, machine translation, image classification
+    
+    Args:
+        num_classes (int): Number of classes in the classification task
+        smoothing (float): Smoothing factor. Should be in [0, 1]. 
+                          Higher values mean more smoothing. Default: 0.1
     """
+    
     def __init__(self, num_classes, smoothing=0.1):
+        """
+        Initialize the Label Smoothing Loss.
+        
+        Args:
+            num_classes (int): Number of classes in the classification task.
+                              Must be greater than 1.
+            smoothing (float): Smoothing factor. Should be in [0, 1].
+                              - 0.0: No smoothing (equivalent to standard cross-entropy)
+                              - 1.0: Maximum smoothing (uniform distribution)
+                              Typical values: 0.1-0.3. Default: 0.1
+        
+        Raises:
+            ValueError: If num_classes <= 1 or smoothing not in [0, 1]
+        """
         super(LabelSmoothingLoss, self).__init__()
+        
+        # Validate parameters
+        if num_classes <= 1:
+            raise ValueError(f"Number of classes must be > 1, got {num_classes}")
+        if not 0 <= smoothing <= 1:
+            raise ValueError(f"Smoothing must be in [0, 1], got {smoothing}")
+        
         self.num_classes = num_classes
         self.smoothing = smoothing
         
     def forward(self, inputs, targets):
         """
+        Forward pass of the Label Smoothing Loss.
+        
         Args:
-            inputs: 预测logits, shape (N, C)
-            targets: 真实标签, shape (N,)
+            inputs (torch.Tensor): Predicted logits from the model.
+                                 Shape: (N, C) where N is batch size, C is number of classes
+            targets (torch.Tensor): Ground truth class indices.
+                                  Shape: (N,) where each value is in [0, C-1]
+        
+        Returns:
+            torch.Tensor: Computed label smoothing loss (scalar tensor)
+        
+        Note:
+            The implementation uses log_softmax for numerical stability and
+            efficiently creates smooth labels using tensor operations.
         """
+        # Compute log probabilities using log_softmax for numerical stability
+        # This avoids the numerical issues of softmax followed by log
         log_probs = F.log_softmax(inputs, dim=1)
         
-        # 创建平滑标签
+        # Create smooth labels: distribute probability mass across all classes
+        # Initialize with uniform probability for all classes except the true class
         smooth_labels = torch.zeros_like(log_probs)
+        
+        # Fill all positions with smoothing probability: α / (K - 1)
+        # This gives equal probability to all incorrect classes
         smooth_labels.fill_(self.smoothing / (self.num_classes - 1))
+        
+        # Set the true class probability to (1 - α)
+        # This gives the true class most of the probability mass
         smooth_labels.scatter_(1, targets.unsqueeze(1), 1 - self.smoothing)
         
+        # Compute the loss: -Σ(y_smooth * log(p))
+        # This is the cross-entropy between smooth labels and predicted probabilities
         loss = -torch.sum(smooth_labels * log_probs, dim=1)
+        
+        # Return mean loss across the batch
         return loss.mean()
 
 class ContrastiveLoss(nn.Module):
     """
-    Contrastive Loss for sentence similarity tasks
-    适用于: 句子相似度、文本匹配任务
+    Contrastive Loss for learning semantic representations in sentence similarity tasks.
+    
+    This loss function is designed to learn meaningful embeddings by pulling similar
+    examples closer together and pushing dissimilar examples apart. It's particularly
+    effective for tasks like semantic similarity, paraphrase detection, and text matching.
+    
+    Mathematical Formula:
+    L_contrastive = y * d² + (1 - y) * max(0, margin - d)²
+    
+    Where:
+    - d is the Euclidean distance between embeddings
+    - y is the similarity label (1 for similar, 0 for dissimilar)
+    - margin is the minimum distance for dissimilar pairs
+    
+    Key Benefits:
+    1. Learns meaningful semantic representations
+    2. Pulls similar examples closer in embedding space
+    3. Pushes dissimilar examples apart (up to margin distance)
+    4. Particularly effective for few-shot learning scenarios
+    5. Can be used with any distance metric (Euclidean, cosine, etc.)
+    
+    Applications: Sentence similarity, paraphrase detection, text matching, 
+                 semantic search, few-shot learning
+    
+    Args:
+        margin (float): Margin for dissimilar pairs. Dissimilar pairs are only
+                       penalized if their distance is less than margin. Default: 1.0
     """
+    
     def __init__(self, margin=1.0):
+        """
+        Initialize the Contrastive Loss.
+        
+        Args:
+            margin (float): Margin for dissimilar pairs. Should be positive.
+                           Higher values allow dissimilar pairs to be closer.
+                           Typical values: 0.5-2.0. Default: 1.0
+        
+        Raises:
+            ValueError: If margin is not positive
+        """
         super(ContrastiveLoss, self).__init__()
+        
+        # Validate margin parameter
+        if margin <= 0:
+            raise ValueError(f"Margin must be positive, got {margin}")
+        
         self.margin = margin
         
     def forward(self, output1, output2, label):
         """
+        Forward pass of the Contrastive Loss.
+        
         Args:
-            output1, output2: 两个句子的embedding
-            label: 1表示相似，0表示不相似
+            output1 (torch.Tensor): Embeddings of first set of examples.
+                                  Shape: (N, D) where N is batch size, D is embedding dimension
+            output2 (torch.Tensor): Embeddings of second set of examples.
+                                  Shape: (N, D) where N is batch size, D is embedding dimension
+            label (torch.Tensor): Similarity labels.
+                                Shape: (N,) where 1 indicates similar, 0 indicates dissimilar
+        
+        Returns:
+            torch.Tensor: Computed contrastive loss (scalar tensor)
+        
+        Note:
+            The implementation uses Euclidean distance, but other distance metrics
+            (cosine, Manhattan, etc.) can be easily substituted.
         """
+        # Compute pairwise Euclidean distance between embeddings
+        # This measures how far apart the embeddings are in the feature space
         euclidean_distance = F.pairwise_distance(output1, output2)
+        
+        # Compute contrastive loss components
+        # For similar pairs (label=1): loss = d² (pull similar examples closer)
+        # For dissimilar pairs (label=0): loss = max(0, margin - d)² (push apart if too close)
         loss_contrastive = torch.mean(
-            label * torch.pow(euclidean_distance, 2) +
-            (1 - label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2)
+            label * torch.pow(euclidean_distance, 2) +  # Similar pairs: minimize distance
+            (1 - label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2)  # Dissimilar pairs: maximize distance (up to margin)
         )
+        
         return loss_contrastive
 
 class DiceLoss(nn.Module):
@@ -277,46 +509,131 @@ class SupConLoss(nn.Module):
         
         return loss
 
-# 实际应用示例
+# =============================================================================
+# DEMONSTRATION AND TESTING FUNCTIONS
+# =============================================================================
+
 class NLPModel(nn.Module):
-    """示例NLP模型"""
+    """
+    Example NLP model for demonstrating custom loss functions.
+    
+    This is a simple LSTM-based model that can be used with various loss functions
+    to demonstrate their effectiveness in different scenarios. The model consists of:
+    1. Embedding layer for converting token IDs to dense vectors
+    2. LSTM layer for capturing sequential patterns
+    3. Linear classifier for final predictions
+    
+    Architecture:
+    Input (token_ids) -> Embedding -> LSTM -> Linear -> Output (logits)
+    
+    Args:
+        vocab_size (int): Size of the vocabulary
+        embed_dim (int): Dimension of word embeddings
+        hidden_dim (int): Hidden dimension of LSTM
+        num_classes (int): Number of output classes
+    """
+    
     def __init__(self, vocab_size, embed_dim, hidden_dim, num_classes):
+        """
+        Initialize the NLP model.
+        
+        Args:
+            vocab_size (int): Size of the vocabulary
+            embed_dim (int): Dimension of word embeddings
+            hidden_dim (int): Hidden dimension of LSTM
+            num_classes (int): Number of output classes
+        """
         super(NLPModel, self).__init__()
+        
+        # Word embedding layer: converts token IDs to dense vectors
         self.embedding = nn.Embedding(vocab_size, embed_dim)
+        
+        # LSTM layer: captures sequential patterns in text
         self.lstm = nn.LSTM(embed_dim, hidden_dim, batch_first=True)
+        
+        # Classification head: maps LSTM output to class predictions
         self.classifier = nn.Linear(hidden_dim, num_classes)
         
     def forward(self, x):
+        """
+        Forward pass of the NLP model.
+        
+        Args:
+            x (torch.Tensor): Input token IDs. Shape: (batch_size, sequence_length)
+        
+        Returns:
+            torch.Tensor: Output logits. Shape: (batch_size, num_classes)
+        """
+        # Convert token IDs to embeddings
         embedded = self.embedding(x)
+        
+        # Process through LSTM
         lstm_out, (hidden, cell) = self.lstm(embedded)
+        
+        # Use the last hidden state for classification
         output = self.classifier(hidden[-1])
+        
         return output
 
 def demonstrate_custom_losses():
-    """演示各种自定义损失函数的使用"""
-    print("=" * 60)
-    print("NLP任务自定义损失函数演示")
-    print("=" * 60)
+    """
+    Comprehensive demonstration of custom loss functions for NLP tasks.
     
-    # 模拟数据
-    batch_size = 32
-    seq_len = 20
-    vocab_size = 1000
-    embed_dim = 128
-    hidden_dim = 256
-    num_classes = 5
+    This function showcases various custom loss functions and their applications
+    in different NLP scenarios. It demonstrates:
+    1. How to use each loss function
+    2. Performance comparison between different losses
+    3. Gradient analysis and numerical stability
+    4. Class imbalance handling
+    5. Practical implementation considerations
     
-    # 创建模型和数据
+    The demonstration includes:
+    - Focal Loss for class imbalance
+    - Label Smoothing for overconfidence reduction
+    - Contrastive Loss for semantic similarity
+    - Dice Loss for sequence labeling
+    - Weighted Cross Entropy for balanced training
+    - Triplet Loss for metric learning
+    - Asymmetric Loss for label noise handling
+    - Supervised Contrastive Loss for better representations
+    """
+    print("=" * 80)
+    print("NLP任务自定义损失函数综合演示")
+    print("=" * 80)
+    print("本演示展示了各种自定义损失函数在NLP任务中的应用")
+    print("包括数值稳定性、梯度分析和类别不平衡处理等关键技术")
+    print("=" * 80)
+    
+    # =================================================================
+    # 1. 数据准备和模型初始化
+    # =================================================================
+    print("1. 数据准备和模型初始化")
+    print("-" * 40)
+    
+    # 设置实验参数
+    batch_size = 32      # 批次大小
+    seq_len = 20         # 序列长度
+    vocab_size = 1000    # 词汇表大小
+    embed_dim = 128      # 词嵌入维度
+    hidden_dim = 256     # LSTM隐藏层维度
+    num_classes = 5      # 分类类别数
+    
+    # 创建示例模型
     model = NLPModel(vocab_size, embed_dim, hidden_dim, num_classes)
+    
+    # 生成模拟数据
+    # 输入: 随机token序列
     inputs = torch.randint(0, vocab_size, (batch_size, seq_len))
+    # 标签: 随机类别标签
     targets = torch.randint(0, num_classes, (batch_size,))
     
-    # 模型输出
+    # 获取模型输出
     outputs = model(inputs)
     
-    print(f"输入形状: {inputs.shape}")
-    print(f"输出形状: {outputs.shape}")
-    print(f"标签形状: {targets.shape}")
+    # 打印数据形状信息
+    print(f"输入形状: {inputs.shape} (batch_size, sequence_length)")
+    print(f"输出形状: {outputs.shape} (batch_size, num_classes)")
+    print(f"标签形状: {targets.shape} (batch_size,)")
     print()
     
     # 1. Focal Loss - 处理类别不平衡
@@ -461,22 +778,86 @@ def class_imbalance_demo():
         print(f"{name:15} | Loss: {loss_value.item():.4f}")
 
 if __name__ == "__main__":
-    # 演示所有自定义损失函数
+    """
+    Main execution function for demonstrating custom loss functions.
+    
+    This script provides a comprehensive demonstration of various custom loss
+    functions for NLP tasks, including:
+    1. Basic usage examples
+    2. Gradient analysis and numerical stability
+    3. Class imbalance handling
+    4. Performance comparisons
+    5. Implementation best practices
+    
+    Usage:
+        python openAI_loss_nlp.py
+    
+    The script will run all demonstrations and provide detailed output
+    showing the effectiveness of different loss functions in various scenarios.
+    """
+    print("🚀 启动自定义损失函数综合演示程序")
+    print("=" * 80)
+    
+    # 1. 演示所有自定义损失函数
+    print("📚 第一部分: 损失函数基础演示")
     demonstrate_custom_losses()
     
-    # 梯度分析
+    # 2. 梯度分析
+    print("\n📊 第二部分: 梯度分析和数值稳定性")
     gradient_analysis()
     
-    # 类别不平衡演示
+    # 3. 类别不平衡演示
+    print("\n⚖️ 第三部分: 类别不平衡处理")
     class_imbalance_demo()
     
-    print("\n" + "=" * 60)
-    print("实现要点总结:")
-    print("=" * 60)
-    print("1. 数值稳定性: 使用log_softmax, clamp等避免溢出")
-    print("2. 梯度计算: 确保所有操作都是可微的")
-    print("3. 设备兼容: 处理CPU/GPU设备转换")
-    print("4. 批量处理: 支持批量输入和不同的reduction模式")
-    print("5. 超参数调节: 提供合理的默认值和调节建议")
-    print("6. 边界情况: 处理极端概率值和空标签")
-    print("7. 内存优化: 避免不必要的中间变量存储")
+    # 4. 实现要点总结
+    print("\n" + "=" * 80)
+    print("🎯 实现要点总结")
+    print("=" * 80)
+    print("本实现涵盖了自定义损失函数的关键技术要点:")
+    print()
+    print("1. 🔢 数值稳定性:")
+    print("   - 使用log_softmax替代softmax+log避免数值溢出")
+    print("   - 使用torch.clamp限制数值范围防止梯度爆炸")
+    print("   - 添加小常数eps避免log(0)的情况")
+    print()
+    print("2. 📈 梯度计算:")
+    print("   - 确保所有操作都是可微的")
+    print("   - 使用retain_graph=True进行多次反向传播")
+    print("   - 监控梯度范数防止梯度消失或爆炸")
+    print()
+    print("3. 🖥️ 设备兼容:")
+    print("   - 处理CPU/GPU设备转换")
+    print("   - 确保所有张量在同一设备上")
+    print("   - 使用.to(device)进行设备迁移")
+    print()
+    print("4. 📦 批量处理:")
+    print("   - 支持批量输入和不同的reduction模式")
+    print("   - 处理变长序列的padding和masking")
+    print("   - 优化内存使用避免OOM错误")
+    print()
+    print("5. ⚙️ 超参数调节:")
+    print("   - 提供合理的默认值和调节建议")
+    print("   - 根据任务特点调整参数")
+    print("   - 使用网格搜索或贝叶斯优化")
+    print()
+    print("6. 🚨 边界情况:")
+    print("   - 处理极端概率值和空标签")
+    print("   - 处理全零或全一的预测")
+    print("   - 处理NaN和Inf值")
+    print()
+    print("7. 💾 内存优化:")
+    print("   - 避免不必要的中间变量存储")
+    print("   - 使用in-place操作减少内存占用")
+    print("   - 及时释放不需要的张量")
+    print()
+    print("8. 🧪 测试验证:")
+    print("   - 单元测试覆盖所有边界情况")
+    print("   - 集成测试验证端到端功能")
+    print("   - 性能测试确保效率")
+    print()
+    print("=" * 80)
+    print("✅ 演示完成! 感谢使用自定义损失函数库")
+    print("💡 提示: 在实际项目中，建议根据具体任务需求选择合适的损失函数")
+    print("   并进行充分的实验验证以获得最佳性能。")
+    print("=" * 80)

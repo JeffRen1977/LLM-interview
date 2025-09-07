@@ -1,42 +1,114 @@
 #!/usr/bin/env python3
 """
-OpenAI Evaluation Framework Implementation
+OpenAI Interview Question 7: Design an Evaluation Framework for Generative Models
 
-Complete implementation of evaluation framework for generative models,
-including automated metrics, human evaluation simulation, and online evaluation.
+This comprehensive module implements a complete evaluation framework for generative
+models, including automated metrics, human evaluation simulation, and online evaluation
+strategies to ensure robust and reliable model assessment.
 
-Author: Extracted from openAI_evaluation_framework.md
+Key Evaluation Components:
+1. Automated Metrics
+   - Perplexity and language modeling metrics
+   - BLEU, ROUGE, and METEOR for text generation
+   - BERTScore and MoverScore for semantic similarity
+   - FID and IS for image generation quality
+   - Custom domain-specific metrics
+
+2. Human Evaluation
+   - A/B testing framework for model comparison
+   - Likert scale evaluation for quality assessment
+   - Red teaming for safety and robustness testing
+   - Crowdsourcing integration and quality control
+   - Inter-annotator agreement analysis
+
+3. Online Evaluation
+   - Implicit signal collection and analysis
+   - User engagement and satisfaction metrics
+   - Real-time performance monitoring
+   - A/B testing for production models
+   - Continuous evaluation and feedback loops
+
+4. Evaluation Framework
+   - Modular and extensible design
+   - Comprehensive metric calculation
+   - Statistical significance testing
+   - Visualization and reporting tools
+   - Production-ready evaluation pipeline
+
+Technical Highlights:
+- Comprehensive metric implementation
+- Statistical analysis and significance testing
+- Visualization and reporting capabilities
+- Production-ready evaluation pipeline
+- Extensible framework for custom metrics
+
+Expected Outcomes:
+- Clear understanding of evaluation methodologies
+- Practical tools for model assessment
+- Production deployment considerations
+- Continuous evaluation strategies
+
+Author: Jianfeng Ren
+Date: 09/07/2025
+Version: 2.0
 """
 
+# Standard library imports
+import json
+import random
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import List, Dict, Tuple, Optional
+
+# Third-party imports
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import List, Dict, Tuple, Optional
-import json
-import random
-from dataclasses import dataclass
-from abc import ABC, abstractmethod
 
-# Try to import evaluation libraries
+# Optional evaluation libraries with fallback handling
 try:
     import evaluate
     EVALUATE_AVAILABLE = True
 except ImportError:
-    print("Warning: evaluate library not available. Install with: pip install evaluate")
+    print("⚠️  Warning: evaluate library not available. Install with: pip install evaluate")
     EVALUATE_AVAILABLE = False
 
 try:
     from bert_score import score as bert_score
     BERT_SCORE_AVAILABLE = True
 except ImportError:
-    print("Warning: bert_score library not available. Install with: pip install bert-score")
+    print("⚠️  Warning: bert_score library not available. Install with: pip install bert-score")
     BERT_SCORE_AVAILABLE = False
 
 
+# =============================================================================
+# CORE EVALUATION FRAMEWORK CLASSES
+# =============================================================================
+
 @dataclass
 class EvaluationResult:
-    """Container for evaluation results"""
+    """
+    Container for evaluation results with comprehensive metadata.
+    
+    This class stores the results of evaluation metrics along with
+    confidence intervals, statistical significance, and additional
+    metadata for comprehensive analysis.
+    
+    Attributes:
+        metric_name (str): Name of the evaluation metric
+        score (float): Computed metric score
+        confidence (Optional[float]): Confidence interval or uncertainty measure
+        metadata (Optional[Dict]): Additional metadata and context information
+    
+    Example:
+        >>> result = EvaluationResult(
+        ...     metric_name="BLEU",
+        ...     score=0.75,
+        ...     confidence=0.02,
+        ...     metadata={"n_grams": 4, "smoothing": "add-k"}
+        ... )
+    """
     metric_name: str
     score: float
     confidence: Optional[float] = None
@@ -44,10 +116,46 @@ class EvaluationResult:
 
 
 class EvaluationMetric(ABC):
-    """Abstract base class for evaluation metrics"""
+    """
+    Abstract base class for evaluation metrics in the generative model framework.
+    
+    This class defines the interface for all evaluation metrics, ensuring
+    consistency and extensibility across different types of assessments.
+    
+    Key Features:
+    - Standardized interface for metric computation
+    - Support for confidence intervals and metadata
+    - Extensible design for custom metrics
+    - Integration with the evaluation framework
+    
+    Subclasses should implement:
+    - compute(): Calculate the metric score
+    - Optional: validate_inputs() for input validation
+    - Optional: get_metadata() for additional context
+    
+    Example:
+        >>> class BLEUMetric(EvaluationMetric):
+        ...     def compute(self, predictions, references):
+        ...         # Implementation here
+        ...         return EvaluationResult(...)
+    """
     
     @abstractmethod
     def compute(self, predictions: List[str], references: List[str]) -> EvaluationResult:
+        """
+        Compute the evaluation metric for given predictions and references.
+        
+        Args:
+            predictions (List[str]): Generated text predictions from the model
+            references (List[str]): Ground truth reference texts
+        
+        Returns:
+            EvaluationResult: Computed metric score with metadata
+        
+        Note:
+            This method should handle edge cases gracefully and provide
+            meaningful error messages for invalid inputs.
+        """
         pass
 
 
@@ -497,12 +605,45 @@ class EvaluationFramework:
 
 
 def demo_evaluation_framework():
-    """Demonstrate the evaluation framework"""
+    """
+    Comprehensive demonstration of the evaluation framework for generative models.
     
-    print("🧠 OpenAI Evaluation Framework Demo")
-    print("=" * 60)
+    This function showcases the complete evaluation pipeline, including:
+    1. Automated metrics calculation
+    2. Human evaluation simulation
+    3. Online evaluation metrics
+    4. Statistical analysis and reporting
+    5. Visualization and insights
     
-    # Sample data
+    Key Demonstration Areas:
+    - Text generation quality assessment
+    - Semantic similarity evaluation
+    - Human evaluation simulation
+    - Online engagement metrics
+    - Comprehensive reporting and analysis
+    
+    Expected Outcomes:
+    - Clear understanding of evaluation methodologies
+    - Practical tools for model assessment
+    - Production deployment considerations
+    - Continuous evaluation strategies
+    """
+    
+    print("🧠 生成模型評估框架綜合演示")
+    print("=" * 80)
+    print("本演示將展示完整的生成模型評估框架，包括:")
+    print("📊 自動化指標    👥 人工評估    🌐 線上評估")
+    print("📈 統計分析      📋 報告生成    🎯 生產部署")
+    print("=" * 80)
+    
+    # =================================================================
+    # 1. 準備示例資料
+    # =================================================================
+    print("\n📊 第一步: 準備示例資料")
+    print("-" * 50)
+    print("正在準備用於評估的示例資料...")
+    
+    # 示例預測文本 (模型生成的文本)
     predictions = [
         "The cat is sitting on the mat.",
         "Machine learning is a subset of artificial intelligence.",
@@ -511,6 +652,7 @@ def demo_evaluation_framework():
         "The quick brown fox jumps over the lazy dog."
     ]
     
+    # 示例參考文本 (人工標註的標準答案)
     references = [
         "There is a cat on the mat.",
         "ML is part of AI technology.",
@@ -518,6 +660,18 @@ def demo_evaluation_framework():
         "Python programming is widely used in data analysis.",
         "A brown fox quickly jumps over a sleeping dog."
     ]
+    
+    print(f"   ✅ 資料準備完成")
+    print(f"   📝 預測文本數量: {len(predictions)}")
+    print(f"   📝 參考文本數量: {len(references)}")
+    print(f"   📊 平均文本長度: {np.mean([len(p) for p in predictions]):.1f} 字符")
+    
+    # 顯示示例資料
+    print(f"\n   📋 示例資料預覽:")
+    for i, (pred, ref) in enumerate(zip(predictions[:3], references[:3])):
+        print(f"      {i+1}. 預測: {pred}")
+        print(f"         參考: {ref}")
+        print()
     
     # Initialize framework
     framework = EvaluationFramework()
@@ -562,42 +716,219 @@ def demo_bert_score_example():
 
 
 def main():
-    """Main function to run all demonstrations"""
+    """
+    Main function to run the comprehensive evaluation framework demonstration.
     
-    print("🎯 OpenAI Evaluation Framework Implementation")
-    print("Extracted and expanded from openAI_evaluation_framework.md")
-    print("=" * 60)
+    This function orchestrates the complete evaluation framework demonstration,
+    showcasing various evaluation methodologies and their applications in
+    generative model assessment.
     
-    # Check available libraries
+    Key Demonstration Areas:
+    1. Library Availability Check
+       - Verify required dependencies
+       - Display fallback implementation status
+       - Ensure graceful degradation
+    
+    2. BERTScore Example Demonstration
+       - Showcase semantic similarity evaluation
+       - Demonstrate precision, recall, F1 calculation
+       - Illustrate practical usage patterns
+    
+    3. Comprehensive Evaluation Framework
+       - Automated metrics evaluation
+       - Human evaluation simulation
+       - Online evaluation metrics
+       - Statistical analysis and reporting
+    
+    4. Error Handling and Recovery
+       - Graceful error handling
+       - Detailed error reporting
+       - Fallback mechanisms
+    
+    Expected Outcomes:
+    - Clear understanding of evaluation methodologies
+    - Practical tools for model assessment
+    - Production deployment considerations
+    - Continuous evaluation strategies
+    """
+    
+    print("🎯 OpenAI 生成模型評估框架實現")
+    print("=" * 80)
+    print("本實現基於 openAI_evaluation_framework.md 擴展而來")
+    print("提供完整的生成模型評估解決方案")
+    print("=" * 80)
+    
+    # =================================================================
+    # 1. 檢查庫依賴和可用性
+    # =================================================================
+    print("\n🔍 第一步: 檢查庫依賴和可用性")
+    print("-" * 50)
+    print("正在檢查所需的庫依賴...")
+    
+    # 檢查 evaluate 庫可用性
     if EVALUATE_AVAILABLE:
-        print("✅ evaluate library available")
+        print("   ✅ evaluate 庫可用 - 支持高級評估指標")
+        print("      📊 提供標準化的評估指標實現")
+        print("      🔧 支持多種評估任務和數據集")
+        print("      📈 包含統計分析和可視化功能")
     else:
-        print("⚠️  evaluate library not available - using fallback implementations")
+        print("   ⚠️  evaluate 庫不可用 - 使用備用實現")
+        print("      🔄 使用自定義的評估指標實現")
+        print("      💡 建議安裝: pip install evaluate")
+        print("      📝 備用實現提供基本功能")
     
+    # 檢查 bert_score 庫可用性
     if BERT_SCORE_AVAILABLE:
-        print("✅ bert_score library available")
+        print("   ✅ bert_score 庫可用 - 支持語義相似度評估")
+        print("      🧠 提供基於BERT的語義相似度計算")
+        print("      📊 支持精確度、召回率、F1分數")
+        print("      🎯 適用於文本生成質量評估")
     else:
-        print("⚠️  bert_score library not available - using fallback implementations")
+        print("   ⚠️  bert_score 庫不可用 - 使用備用實現")
+        print("      🔄 使用簡化的語義相似度計算")
+        print("      💡 建議安裝: pip install bert-score")
+        print("      📝 備用實現提供基本功能")
     
-    print()
+    print(f"\n   📋 依賴檢查完成")
+    print(f"   🔧 評估庫狀態: {'完整' if EVALUATE_AVAILABLE else '備用'}")
+    print(f"   🧠 BERTScore狀態: {'完整' if BERT_SCORE_AVAILABLE else '備用'}")
     
-    # Run demonstrations
+    # =================================================================
+    # 2. 運行演示程序
+    # =================================================================
+    print("\n🚀 第二步: 運行演示程序")
+    print("-" * 50)
+    print("正在啟動評估框架演示...")
+    
     try:
-        # Demo 1: BERTScore example from markdown
-        demo_bert_score_example()
+        # =================================================================
+        # 2.1 BERTScore 示例演示
+        # =================================================================
+        print("\n🔍 演示 1: BERTScore 語義相似度評估")
+        print("-" * 40)
+        print("正在演示 BERTScore 計算和應用...")
         
-        # Demo 2: Comprehensive evaluation framework
-        demo_evaluation_framework()
+        bertscore_result = demo_bert_score_example()
         
-        print("\n" + "=" * 60)
-        print("🎉 All demonstrations completed successfully!")
-        print("=" * 60)
+        print(f"   ✅ BERTScore 演示完成")
+        print(f"   📊 結果: {bertscore_result.score:.4f}")
+        
+        # =================================================================
+        # 2.2 綜合評估框架演示
+        # =================================================================
+        print("\n🧠 演示 2: 綜合評估框架")
+        print("-" * 40)
+        print("正在運行完整的評估框架演示...")
+        
+        evaluation_results = demo_evaluation_framework()
+        
+        print(f"   ✅ 綜合評估演示完成")
+        print(f"   📊 評估維度: {len(evaluation_results)} 個主要類別")
+        
+        # =================================================================
+        # 3. 演示總結和建議
+        # =================================================================
+        print("\n" + "=" * 80)
+        print("🎯 演示總結和關鍵要點")
+        print("=" * 80)
+        
+        print("\n✅ 所有演示成功完成!")
+        print("\n💡 關鍵要點總結:")
+        print("   📊 自動化評估指標:")
+        print("      - 提供客觀的質量評估")
+        print("      - 支持大規模批量評估")
+        print("      - 可重現和可比較的結果")
+        print("      - 適用於模型開發和調優")
+        
+        print("   👥 人工評估模擬:")
+        print("      - 捕捉主觀質量方面")
+        print("      - 提供人類偏好的洞察")
+        print("      - 支持複雜的質量維度")
+        print("      - 適用於最終質量驗證")
+        
+        print("   🌐 線上評估指標:")
+        print("      - 測量真實世界性能")
+        print("      - 監控用戶滿意度")
+        print("      - 支持持續改進")
+        print("      - 適用於生產環境監控")
+        
+        print("   🔧 綜合評估策略:")
+        print("      - 結合多種評估方法")
+        print("      - 平衡客觀和主觀指標")
+        print("      - 考慮不同使用場景")
+        print("      - 建立持續監控機制")
+        
+        print("\n🚀 生產部署建議:")
+        print("   📈 評估策略:")
+        print("      - 建立多層次評估體系")
+        print("      - 實施持續監控和反饋")
+        print("      - 定期進行A/B測試")
+        print("      - 收集用戶反饋和改進建議")
+        
+        print("   🔍 監控指標:")
+        print("      - 自動化指標: 準確率、流暢度、相關性")
+        print("      - 人工評估: 質量評分、用戶滿意度")
+        print("      - 線上指標: 參與度、留存率、轉化率")
+        print("      - 業務指標: 成本效益、ROI、用戶增長")
+        
+        print("   ⚠️  注意事項:")
+        print("      - 定期更新評估標準")
+        print("      - 考慮不同用戶群體的需求")
+        print("      - 監控模型性能變化")
+        print("      - 建立應急響應機制")
+        
+        print("\n🎉 生成模型評估框架演示完成!")
+        print("=" * 80)
         
     except Exception as e:
-        print(f"\n❌ Error during demonstration: {e}")
+        print(f"\n❌ 演示過程中出错: {e}")
+        print("\n💡 故障排除提示:")
+        print("   • 確保已安裝所有必需的包")
+        print("   • 檢查Python版本兼容性")
+        print("   • 查看詳細錯誤信息進行調試")
+        print("   • 嘗試安裝可選的評估庫")
+        print("   • 檢查系統資源和權限")
+        
+        # 提供詳細的錯誤信息
         import traceback
+        print("\n🔍 詳細錯誤信息:")
         traceback.print_exc()
+        
+        print("\n🛠️ 建議的解決步驟:")
+        print("   1. 檢查Python環境和版本")
+        print("   2. 安裝缺失的依賴包")
+        print("   3. 檢查文件權限和路徑")
+        print("   4. 查看系統資源使用情況")
+        print("   5. 嘗試重新運行程序")
 
 
 if __name__ == "__main__":
+    """
+    Entry point for the Evaluation Framework demonstration.
+    
+    This script can be run directly to see the complete evaluation framework
+    demonstration in action. It will show:
+    - Automated metrics calculation and analysis
+    - Human evaluation simulation and frameworks
+    - Online evaluation metrics and monitoring
+    - Comprehensive reporting and recommendations
+    
+    Run with: python openAI_evaluation_framework.py
+    
+    Requirements:
+    - numpy >= 1.21.0
+    - pandas >= 1.3.0
+    - matplotlib >= 3.5.0
+    - seaborn >= 0.11.0
+    - Optional: evaluate, bert-score for advanced metrics
+    
+    Expected Output:
+    - Comprehensive evaluation demonstration
+    - Statistical analysis and insights
+    - Production deployment recommendations
+    - Performance benchmarking results
+    """
+    print("🚀 啟動生成模型評估框架演示")
+    print("=" * 80)
+    
     main()

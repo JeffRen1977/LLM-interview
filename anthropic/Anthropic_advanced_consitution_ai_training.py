@@ -16,8 +16,8 @@ Key Features:
 - Adaptive learning rate scheduling and gradient norm tracking
 - Comprehensive evaluation metrics for constitutional adherence
 
-Author: AI Research Team
-Date: 2024
+Author: Jianfeng Ren, 
+Date: 09/072025
 """
 
 import torch
