@@ -1,18 +1,20 @@
 # OpenAI 技术面试问题集
 
 ## 目录
-1. [自定义损失函数](#problem-1-自定义损失函数)
-2. [机器学习流水线性能优化](#problem-2-机器学习流水线性能优化)
-3. [大型模型高效推理实现](#problem-3-实现大型模型的高效推理)
-4. [内存高效的训练算法](#problem-4-内存高效的训练算法)
-5. [新颖的注意力变体实现](#problem-5-实现新颖的注意力变体)
-6. [有偏见数据集的分析与修复](#problem-6-分析并修复有偏见的数据集)
-7. [生成模型评估框架设计](#problem-7-生成模型评估框架设计)
-8. [训练不稳定问题调试](#problem-8-训练不稳定问题调试)
+1. [自定义损失函数](#problem-1-自定义损失函数) - [📁 openAI_loss_nlp.py](openAI_loss_nlp.py)
+2. [机器学习流水线性能优化](#problem-2-机器学习流水线性能优化) - [📁 openAI_optimize_pipeline.py](openAI_optimize_pipeline.py)
+3. [大型模型高效推理实现](#problem-3-实现大型模型的高效推理) - [📁 openAI_optimize_inference_model.py](openAI_optimize_inference_model.py)
+4. [内存高效的训练算法](#problem-4-内存高效的训练算法) - [📁 openAI_memory_efficient_training.py](openAI_memory_efficient_training.py)
+5. [新颖的注意力变体实现](#problem-5-实现新颖的注意力变体) - [📁 openAI_novel_attention_variant.py](openAI_novel_attention_variant.py) *(待实现)*
+6. [有偏见数据集的分析与修复](#problem-6-分析并修复有偏见的数据集) - [📁 openAI_fix_bias_dataset.py](openAI_fix_bias_dataset.py)
+7. [生成模型评估框架设计](#problem-7-生成模型评估框架设计) - [📁 openAI_evaluation_framework.py](openAI_evaluation_framework.py)
+8. [训练不稳定问题调试](#problem-8-训练不稳定问题调试) - [📁 openAI_debug_instability.py](openAI_debug_instability.py)
 
 ---
 
 ## Problem 1: 自定义损失函数
+
+**📁 实现文件**: [openAI_loss_nlp.py](openAI_loss_nlp.py)
 
 ### 题目背景
 自定义损失函数在NLP任务中非常重要，不同的任务可能需要特殊的损失函数来处理类别不平衡、梯度消失、数值稳定性等问题。
@@ -74,6 +76,8 @@ total_loss = α * classification_loss + β * regression_loss + γ * auxiliary_lo
 
 ## Problem 2: 机器学习流水线性能优化
 
+**📁 实现文件**: [openAI_optimize_pipeline.py](openAI_optimize_pipeline.py)
+
 ### 题目背景
 机器学习流水线性能优化需要从多个角度进行系统性分析和改进，包括数据预处理、特征工程、模型训练和推理等各个环节。
 
@@ -120,6 +124,8 @@ total_loss = α * classification_loss + β * regression_loss + γ * auxiliary_lo
 ---
 
 ## Problem 3: 实现大型模型的高效推理
+
+**📁 实现文件**: [openAI_optimize_inference_model.py](openAI_optimize_inference_model.py)
 
 ### 题目背景
 给定一个大型模型，要求实现高效的推理系统。需要考虑内存使用、计算速度、批处理等问题。
@@ -188,6 +194,8 @@ total_loss = α * classification_loss + β * regression_loss + γ * auxiliary_lo
 ---
 
 ## Problem 4: 内存高效的训练算法
+
+**📁 实现文件**: [openAI_memory_efficient_training.py](openAI_memory_efficient_training.py)
 
 ### 题目背景
 实现一个内存高效的训练算法，能够在有限的GPU内存下训练大型模型。
@@ -268,6 +276,8 @@ total_loss = α * classification_loss + β * regression_loss + γ * auxiliary_lo
 
 ## Problem 5: 实现新颖的注意力变体
 
+**📁 实现文件**: [openAI_novel_attention_variant.py](openAI_novel_attention_variant.py) *(待实现)*
+
 ### 题目背景
 基于现有的attention机制，设计并实现一个新的变种，要求在某些方面有所改进。
 
@@ -330,6 +340,8 @@ def sliding_window_attention(query, key, value, window_size):
 ---
 
 ## Problem 6: 分析并修复有偏见的数据集
+
+**📁 实现文件**: [openAI_fix_bias_dataset.py](openAI_fix_bias_dataset.py)
 
 ### 题目背景
 给你一个存在偏见的数据集，要求你分析偏见的来源并提出解决方案。
@@ -420,6 +432,8 @@ def fair_loss(predictions, targets, sensitive_attr, lambda_fair=1.0):
 ---
 
 ## Problem 7: 生成模型评估框架设计
+
+**📁 实现文件**: [openAI_evaluation_framework.py](openAI_evaluation_framework.py)
 
 ### 题目背景
 设计一个评估生成模型质量的框架，包括自动化指标和人工评估方法。
@@ -531,6 +545,8 @@ def fair_loss(predictions, targets, sensitive_attr, lambda_fair=1.0):
 ---
 
 ## Problem 8: 训练不稳定问题调试
+
+**📁 实现文件**: [openAI_debug_instability.py](openAI_debug_instability.py)
 
 ### 题目背景
 训练不稳定是深度学习中常见的问题，表现为loss突然跳跃、不收敛、梯度爆炸或消失等。需要系统性地诊断和解决。
