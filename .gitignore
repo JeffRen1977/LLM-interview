@@ -43,3 +43,14 @@ openai_test_report_*.txt
 
 # Logs
 *.log
+
+# Model files and checkpoints
+*.safetensors
+*.bin
+*.pt
+*.pth
+*_model/
+constitutional_model/
+rlhf_model/
+sft_model/
+training_history.json
