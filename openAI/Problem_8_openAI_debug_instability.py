@@ -4,47 +4,240 @@ OpenAI 訓練不穩定性問題調試工具
 本模組提供了一套完整的訓練不穩定性診斷和解決方案，專門針對深度學習模型
 訓練過程中可能遇到的各種穩定性問題。
 
-主要功能:
-1. 訓練穩定性診斷
-   - 梯度范數監控和分析
-   - 權重范數統計和檢查
-   - 激活值分布分析
-   - 損失函數異常檢測
+================================================================================
+主要功能
+================================================================================
 
-2. 穩定訓練器實現
+1. 訓練穩定性診斷 (TrainingStabilityDiagnostics)
+   - 梯度范數監控和分析
+     * 計算總體梯度范數（L2范數）
+     * 分析各層梯度分布
+     * 檢測梯度爆炸（norm > 10.0）和梯度消失（norm < 0.01）
+     * 提供詳細的梯度統計信息
+   
+   - 權重范數統計和檢查
+     * 監控權重參數范數
+     * 分析權重分布統計（均值、標準差）
+     * 檢測權重異常變化
+     * 提供權重健康狀態報告
+   
+   - 激活值分布分析
+     * 使用 forward hook 捕獲各層激活值
+     * 分析激活值分布統計
+     * 檢測 NaN 和 Inf 值
+     * 監控激活值範圍和飽和情況
+   
+   - 損失函數異常檢測
+     * 檢測損失跳躍（相鄰步驟劇烈變化）
+     * 識別振盪模式（標準差過大）
+     * 發現數值異常（NaN/Inf）
+     * 提供穩定性建議
+
+2. 穩定訓練器實現 (StableTrainer)
    - 梯度裁剪和正則化
+     * 自動梯度裁剪（clip_grad_norm）
+     * 權重衰減正則化（weight decay）
+     * 可配置的梯度裁剪閾值
+     * 防止梯度爆炸和數值不穩定
+   
    - 學習率預熱和調度
+     * 線性學習率預熱（warmup）
+     * 支持多種調度策略（cosine, plateau）
+     * 自適應學習率調整
+     * 平滑的學習率過渡
+   
    - 數值穩定性保護
+     * 自動檢測 NaN/Inf 值
+     * 損失縮放（混合精度訓練）
+     * 數值範圍檢查
+     * 溢出保護機制
+   
    - 模型健康狀態監控
+     * 實時參數健康檢查
+     * 自動異常檢測和報告
+     * 訓練中斷保護
+     * 詳細的錯誤日誌
 
 3. 常見問題修復
    - 學習率調整策略
+     * 學習率選擇指南
+     * 預熱步數設置建議
+     * 調度器參數配置
+     * 不同層學習率設置
+   
    - 梯度問題解決方案
+     * 梯度裁剪參數設置
+     * 梯度累積技術
+     * 梯度檢查和調試
+     * 梯度正則化方法
+   
    - 數據質量檢查
+     * 數據歸一化/標準化
+     * NaN/Inf 值檢測和處理
+     * 異常值識別和移除
+     * 數據分布分析
+   
    - 模型架構優化
+     * 批歸一化（BatchNorm）使用
+     * 殘差連接（ResNet）設計
+     * 激活函數選擇
+     * 正則化技術應用
 
 4. 診斷工具和可視化
    - 實時監控指標
+     * 損失值趨勢
+     * 梯度范數變化
+     * 學習率變化
+     * 準確率變化
+   
    - 統計分析和報告
+     * 自動問題檢測
+     * 詳細的統計報告
+     * 問題分類和優先級
+     * 修復建議生成
+   
    - 問題識別和建議
+     * 自動診斷不穩定性
+     * 問題根源分析
+     * 針對性解決方案
+     * 最佳實踐建議
+   
    - 性能基準測試
+     * 訓練速度監控
+     * 內存使用分析
+     * GPU 利用率統計
+     * 性能瓶頸識別
 
-技術特點:
+================================================================================
+技術特點
+================================================================================
+
 - 支持多種優化器和學習率調度策略
+  * Adam, AdamW, SGD 等優化器
+  * CosineAnnealingLR, ReduceLROnPlateau 等調度器
+  * 自定義優化器和調度器支持
+
 - 提供詳細的梯度分析工具
+  * 總體和逐層梯度范數計算
+  * 梯度分布統計分析
+  * 梯度異常自動檢測
+  * 梯度可視化支持
+
 - 包含數值穩定性保護機制
+  * 自動 NaN/Inf 檢測
+  * 梯度裁剪和損失縮放
+  * 數值範圍檢查
+  * 溢出保護
+
 - 支持混合精度訓練
+  * 損失縮放因子配置
+  * FP16/BF16 支持
+  * 數值穩定性保證
+
 - 提供完整的錯誤處理和日誌記錄
+  * 詳細的錯誤信息
+  * 自動問題報告
+  * 訓練狀態記錄
+  * 性能指標追蹤
 
-適用場景:
+================================================================================
+適用場景
+================================================================================
+
 - 深度學習模型訓練調試
-- 訓練不穩定性問題診斷
-- 模型性能優化
-- 生產環境穩定性監控
+  * 新模型訓練時的穩定性檢查
+  * 訓練問題診斷和修復
+  * 超參數調優過程中的監控
 
+- 訓練不穩定性問題診斷
+  * 梯度爆炸/消失問題
+  * 數值不穩定性問題
+  * 學習率設置問題
+  * 數據質量問題
+
+- 模型性能優化
+  * 訓練速度優化
+  * 內存使用優化
+  * 穩定性改進
+  * 收斂速度提升
+
+- 生產環境穩定性監控
+  * 實時訓練監控
+  * 異常自動檢測
+  * 性能指標追蹤
+  * 問題預警機制
+
+================================================================================
+快速開始
+================================================================================
+
+基本使用示例：
+
+    from openAI_debug_instability import StableTrainer, TrainingStabilityDiagnostics
+    
+    # 1. 創建診斷工具
+    diagnostics = TrainingStabilityDiagnostics()
+    
+    # 2. 創建穩定訓練器
+    trainer = StableTrainer(model, train_loader, val_loader, device='cuda')
+    
+    # 3. 設置優化器和調度器
+    trainer.setup_optimizer_and_scheduler(
+        learning_rate=1e-3,
+        weight_decay=1e-4,
+        use_warmup=True,
+        scheduler_type='cosine'
+    )
+    
+    # 4. 訓練模型
+    for epoch in range(num_epochs):
+        metrics = trainer.train_epoch(epoch)
+        
+        # 檢查梯度范數
+        grad_stats = trainer.diagnostics.check_gradient_norms(model)
+        print(f"梯度范數: {grad_stats['total_norm']:.4f}")
+        
+        # 診斷不穩定性
+        if len(trainer.diagnostics.metrics['loss']) > 10:
+            issues = trainer.diagnostics.diagnose_instability(
+                trainer.diagnostics.metrics['loss'][-20:]
+            )
+            if issues:
+                print("發現問題:")
+                for issue in issues:
+                    print(f"  - {issue}")
+
+================================================================================
+最佳實踐
+================================================================================
+
+1. 訓練前檢查
+   - 檢查數據質量（NaN/Inf 值）
+   - 驗證模型架構和初始化
+   - 設置合理的學習率和優化器參數
+
+2. 訓練中監控
+   - 定期檢查梯度范數（每 100 步）
+   - 監控損失值趨勢
+   - 檢查模型參數健康狀態
+
+3. 問題處理
+   - 梯度爆炸：降低學習率或使用梯度裁剪
+   - 梯度消失：檢查激活函數或使用殘差連接
+   - NaN/Inf：檢查數據和數值穩定性
+   - 損失振盪：調整學習率或數據預處理
+
+4. 性能優化
+   - 使用梯度累積處理大批量
+   - 使用混合精度訓練加速
+   - 合理設置 batch_size 和學習率
+
+================================================================================
 作者: OpenAI Interview Preparation
 版本: 1.0.0
 更新日期: 2024
+許可證: MIT
+================================================================================
 """
 
 import torch
@@ -188,61 +381,133 @@ class TrainingStabilityDiagnostics:
         
         參數:
             model (nn.Module): 要檢查的PyTorch模型
+                注意：必須在調用 backward() 之後使用，否則梯度為 None
         
         返回:
             Dict[str, float]: 包含梯度范數統計信息的字典
                 - total_norm: 總體梯度范數 (L2范數)
+                  計算方式：sqrt(Σ(param_norm²))，所有參數梯度范數的平方和再開方
+                  正常範圍：通常在 0.1 到 10.0 之間
+                  異常情況：> 10.0 可能表示梯度爆炸，< 0.01 可能表示梯度消失
+                
                 - max_norm: 最大單個參數梯度范數
+                  所有參數中梯度范數最大的值
+                  用於識別哪個參數的梯度異常大
+                
                 - min_norm: 最小單個參數梯度范數
+                  所有參數中梯度范數最小的值
+                  用於識別哪個參數的梯度接近零（梯度消失）
+                
                 - avg_norm: 平均梯度范數
+                  計算方式：total_norm / param_count
+                  提供梯度的平均大小參考
+                
                 - layer_norms: 各層梯度范數詳情
+                  字典格式：{層名稱: 梯度范數值}
+                  用於定位具體哪一層出現問題
         
         技術細節:
-        - 使用L2范數計算梯度大小
-        - 只計算有梯度的參數
+        - 使用L2范數（歐幾里得范數）計算梯度大小
+          公式：||g||₂ = sqrt(Σ(gᵢ²))
+          優點：對所有維度平等對待，適合多維梯度
+        
+        - 只計算有梯度的參數（param.grad is not None）
+          某些參數可能被設置為 requires_grad=False
+          某些參數可能還沒有計算梯度
+        
         - 提供總體和逐層的統計信息
+          總體范數用於全局判斷，逐層范數用於定位問題
+        
         - 支持梯度爆炸和消失檢測
+          梯度爆炸：total_norm > 10.0 或 max_norm 異常大
+          梯度消失：total_norm < 0.01 或 min_norm 接近 0
+        
+        梯度范數的意義:
+        - 梯度范數反映了參數更新的幅度
+        - 過大的梯度范數會導致參數更新過大，訓練不穩定
+        - 過小的梯度范數會導致參數更新過小，訓練緩慢或停滯
+        - 理想的梯度范數應該在合理範圍內（通常 0.1-10.0）
         
         使用示例:
+            # 在反向傳播後檢查梯度
+            loss.backward()
             grad_stats = diagnostics.check_gradient_norms(model)
+            
+            # 檢查梯度爆炸
             if grad_stats['total_norm'] > 10.0:
-                print("警告: 梯度范數過大，可能存在梯度爆炸")
+                print(f"警告: 梯度范數過大 ({grad_stats['total_norm']:.4f})，可能存在梯度爆炸")
+                print("建議: 降低學習率或使用梯度裁剪")
+            
+            # 檢查梯度消失
+            if grad_stats['total_norm'] < 0.01:
+                print(f"警告: 梯度范數過小 ({grad_stats['total_norm']:.4f})，可能存在梯度消失")
+                print("建議: 檢查激活函數、網絡深度或使用殘差連接")
+            
+            # 檢查特定層的梯度
+            for layer_name, norm in grad_stats['layer_norms'].items():
+                if norm > 5.0:
+                    print(f"警告: {layer_name} 的梯度范數異常大: {norm:.4f}")
+        
+        注意事項:
+        - 必須在 loss.backward() 之後調用
+        - 如果某些參數沒有梯度，會被跳過
+        - 梯度范數的閾值需要根據具體任務調整
+        - 建議在訓練過程中定期檢查梯度范數
         """
         # 初始化統計變量
-        total_norm = 0.0  # 總體梯度范數的平方和
-        param_count = 0   # 有梯度的參數數量
-        max_norm = 0.0    # 最大單個參數梯度范數
-        min_norm = float('inf')  # 最小單個參數梯度范數
-        layer_norms = {}  # 各層梯度范數詳情
+        total_norm = 0.0  # 總體梯度范數的平方和（用於計算L2范數）
+                          # 注意：這裡先累加平方，最後再開方
+        param_count = 0   # 有梯度的參數數量（用於計算平均值）
+        max_norm = 0.0    # 最大單個參數梯度范數（用於檢測異常大的梯度）
+        min_norm = float('inf')  # 最小單個參數梯度范數（用於檢測接近零的梯度）
+                                 # 初始化為無窮大，確保第一次比較能正確更新
+        layer_norms = {}  # 各層梯度范數詳情（用於定位問題層）
         
         # 遍歷模型中的所有參數
+        # named_parameters() 返回 (name, param) 元組
+        # name: 參數的完整路徑名稱，如 'fc1.weight', 'fc2.bias'
+        # param: 參數張量對象
         for name, param in model.named_parameters():
             # 只處理有梯度的參數
+            # param.grad 是梯度張量，如果為 None 說明該參數沒有梯度
+            # 可能原因：requires_grad=False 或還沒有執行 backward()
             if param.grad is not None:
                 # 計算當前參數的L2范數
+                # norm(2) 計算 L2 范數：||g||₂ = sqrt(Σ(gᵢ²))
+                # 對於形狀為 (m, n) 的梯度矩陣，計算所有元素的平方和再開方
                 param_norm = param.grad.data.norm(2)
                 
                 # 記錄各層的梯度范數
+                # 使用 .item() 將單元素張量轉換為 Python 數值
                 layer_norms[name] = param_norm.item()
                 
                 # 累加到總體范數的平方和中
+                # 注意：這裡累加的是平方值，不是范數本身
+                # 原因：L2范數的計算公式是 sqrt(Σ||gᵢ||²)
+                # 所以先累加平方，最後再統一開方
                 total_norm += param_norm.item() ** 2
                 param_count += 1
                 
                 # 更新最大值和最小值
+                # 用於識別梯度異常的參數
                 max_norm = max(max_norm, param_norm.item())
                 min_norm = min(min_norm, param_norm.item())
         
         # 計算總體L2范數 (平方和的平方根)
+        # 這是所有參數梯度范數的總體度量
+        # 公式：total_norm = sqrt(Σ||gᵢ||²)
+        # 這個值反映了整個模型的梯度大小
         total_norm = total_norm ** (1. / 2)
         
         # 返回完整的梯度統計信息
         return {
-            'total_norm': total_norm,  # 總體梯度范數
-            'max_norm': max_norm,      # 最大單個參數梯度范數
+            'total_norm': total_norm,  # 總體梯度范數（最重要的指標）
+            'max_norm': max_norm,      # 最大單個參數梯度范數（用於檢測異常）
             'min_norm': min_norm if min_norm != float('inf') else 0.0,  # 最小單個參數梯度范數
+                                       # 如果沒有找到任何梯度，返回 0.0
             'avg_norm': total_norm / max(param_count, 1),  # 平均梯度范數
-            'layer_norms': layer_norms  # 各層梯度范數詳情
+                                       # 使用 max(param_count, 1) 避免除零錯誤
+            'layer_norms': layer_norms  # 各層梯度范數詳情（用於詳細分析）
         }
     
     def check_weight_norms(self, model: nn.Module) -> Dict[str, float]:
@@ -392,41 +657,117 @@ class TrainingStabilityDiagnostics:
         
         參數:
             loss_history (List[float]): 損失函數歷史記錄
-            threshold (float): 損失跳躍檢測閾值，默認為1.0
+                應該包含連續的損失值，用於分析趨勢和異常
+                建議至少包含 10 個以上的值以進行有效分析
+                例如：[0.5, 0.3, 0.8, 0.2, 0.9, ...]
+            
+            threshold (float): 損失跳躍檢測閾值，默認為 1.0
+                如果相鄰步驟的損失變化超過此閾值，會被標記為跳躍
+                建議設置：
+                - 小模型/穩定訓練：threshold = 0.5
+                - 中等模型：threshold = 1.0（默認）
+                - 大模型/不穩定訓練：threshold = 2.0
+                也可以使用相對閾值：threshold = mean(loss) * 0.5
         
         返回:
             List[str]: 檢測到的問題列表，每個問題包含描述信息
+                格式：["問題類型: 詳細描述", ...]
+                例如：
+                ["Loss jump detected at step 5: 0.3000 -> 1.2000 (change: 0.9000)",
+                 "NaN loss value detected at step 10: nan",
+                 "Loss oscillation detected in recent steps: std=0.2500, mean=0.5000, cv=50.00%"]
+                如果沒有檢測到問題，返回空列表 []
         
         檢測的問題類型:
         1. 損失跳躍 (Loss Jump)
            - 檢測相鄰步驟間損失值的劇烈變化
-           - 通常表示學習率過大或梯度爆炸
+           - 計算方式：|loss[i] - loss[i-1]| > threshold
+           - 通常表示：
+             * 學習率過大：參數更新過大導致損失突然變化
+             * 梯度爆炸：梯度過大導致參數更新異常
+             * 數據問題：批次中包含異常數據
+             * 數值溢出：計算過程中出現數值問題
         
         2. 數值異常 (Invalid Values)
-           - 檢測NaN (Not a Number) 值
-           - 檢測Inf (Infinity) 值
-           - 通常表示數值計算溢出或除零錯誤
+           - 檢測 NaN (Not a Number) 值
+             通常由以下原因導致：
+             * 0/0 或 inf/inf 運算
+             * log(0) 或 sqrt(-1) 等無效運算
+             * 數值溢出後的結果
+           - 檢測 Inf (Infinity) 值
+             通常由以下原因導致：
+             * 除以零：x / 0
+             * 數值溢出：exp(大數) 或 大數 * 大數
+             * 梯度爆炸：梯度累積過大
+           - 這些是嚴重的數值問題，必須立即處理
         
         3. 損失振盪 (Loss Oscillation)
-           - 檢測損失值的劇烈波動
-           - 通常表示學習率不穩定或數據問題
+           - 檢測損失值的劇烈波動模式
+           - 計算方式：使用最近 N 個步驟（默認 10 個）
+           - 統計指標：
+             * 標準差 (std)：衡量波動程度
+             * 均值 (mean)：平均損失值
+             * 變異係數 (cv = std/mean)：相對波動程度
+           - 判斷標準：如果 std > mean * 0.1（10%），認為存在振盪
+           - 通常表示：
+             * 學習率不穩定：學習率變化過大
+             * 數據問題：數據分布不均勻或包含噪聲
+             * 模型容量問題：模型過大或過小
+             * 優化器問題：優化器參數設置不當
         
         使用示例:
-            loss_history = [0.5, 0.3, 0.8, 0.2, 0.9]
+            # 基本使用
+            loss_history = [0.5, 0.3, 0.8, 0.2, 0.9, 0.1, 1.5, 0.2]
             issues = diagnostics.diagnose_instability(loss_history, threshold=0.5)
             for issue in issues:
                 print(f"問題: {issue}")
+            
+            # 在訓練循環中使用
+            epoch_losses = []
+            for epoch in range(num_epochs):
+                epoch_loss = train_epoch()
+                epoch_losses.append(epoch_loss)
+                
+                # 定期診斷
+                if len(epoch_losses) > 10:
+                    issues = diagnostics.diagnose_instability(epoch_losses[-20:])
+                    if issues:
+                        print(f"Epoch {epoch} 發現問題:")
+                        for issue in issues:
+                            print(f"  - {issue}")
+        
+        注意事項:
+        - 需要足夠的歷史數據才能有效檢測（建議至少 10 個值）
+        - 閾值需要根據具體任務調整
+        - 損失跳躍和振盪可能同時存在
+        - NaN/Inf 值是最嚴重的問題，必須優先處理
+        
+        建議的處理流程:
+        1. 首先檢查 NaN/Inf 值（最嚴重）
+        2. 然後檢查損失跳躍（可能導致 NaN）
+        3. 最後檢查損失振盪（影響訓練效率）
         """
-        issues = []  # 存儲檢測到的問題
+        issues = []  # 存儲檢測到的問題列表
         
         # 檢查歷史記錄長度
+        # 如果歷史記錄少於 2 個值，無法進行有效的分析
+        # 直接返回空列表，避免後續計算錯誤
         if len(loss_history) < 2:
             return issues
         
         # 1. 檢查損失跳躍
         # 檢測相鄰步驟間損失值的劇烈變化
+        # 這是訓練不穩定性的早期信號
         for i in range(1, len(loss_history)):
+            # 計算相鄰步驟的損失變化
+            # 使用絕對值，因為損失可能增加或減少
             loss_change = abs(loss_history[i] - loss_history[i-1])
+            
+            # 如果變化超過閾值，標記為跳躍
+            # 閾值可以根據任務調整：
+            # - 分類任務：通常 threshold = 0.5-1.0
+            # - 回歸任務：可能需要更大的閾值
+            # - 也可以使用相對閾值：threshold = mean(loss) * 0.5
             if loss_change > threshold:
                 issues.append(
                     f"Loss jump detected at step {i}: "
@@ -436,25 +777,54 @@ class TrainingStabilityDiagnostics:
         
         # 2. 檢查NaN或Inf值
         # 檢測數值異常，這些通常表示嚴重的數值問題
+        # NaN 和 Inf 值會導致訓練完全失敗，必須立即處理
         for i, loss in enumerate(loss_history):
+            # 檢查 NaN 值
+            # NaN 通常由以下運算產生：
+            # - 0/0, inf/inf, 0*inf
+            # - log(0), sqrt(-1)
+            # - 數值溢出後的結果
             if np.isnan(loss):
                 issues.append(f"NaN loss value detected at step {i}: {loss}")
+            
+            # 檢查 Inf 值
+            # Inf 通常由以下運算產生：
+            # - x/0 (x != 0)
+            # - exp(大數), 大數 * 大數
+            # - 梯度爆炸導致的數值溢出
             elif np.isinf(loss):
                 issues.append(f"Infinity loss value detected at step {i}: {loss}")
         
         # 3. 檢查損失振盪
         # 檢測損失值的劇烈波動模式
+        # 需要足夠的歷史數據才能有效檢測（至少 10 個值）
         if len(loss_history) > 10:
-            recent_losses = loss_history[-10:]  # 取最近10個步驟
-            loss_std = np.std(recent_losses)    # 計算標準差
-            loss_mean = np.mean(recent_losses)  # 計算均值
+            # 取最近 10 個步驟進行分析
+            # 使用最近的值可以更好地反映當前的訓練狀態
+            recent_losses = loss_history[-10:]
+            
+            # 計算標準差：衡量波動程度
+            # 標準差越大，波動越劇烈
+            loss_std = np.std(recent_losses)
+            
+            # 計算均值：平均損失值
+            # 用於計算相對波動程度
+            loss_mean = np.mean(recent_losses)
             
             # 如果標準差相對於均值過大，認為存在振盪
+            # 使用變異係數 (CV = std/mean) 來衡量相對波動
+            # 閾值 0.1 表示標準差超過均值的 10%
+            # 這個閾值可以根據任務調整：
+            # - 穩定訓練：CV < 0.05 (5%)
+            # - 正常訓練：CV < 0.1 (10%)
+            # - 不穩定訓練：CV > 0.1 (10%)
             if loss_std > loss_mean * 0.1:  # 10%的閾值
+                # 計算變異係數（Coefficient of Variation）
+                cv = loss_std / loss_mean if loss_mean > 0 else float('inf')
                 issues.append(
                     f"Loss oscillation detected in recent steps: "
                     f"std={loss_std:.4f}, mean={loss_mean:.4f}, "
-                    f"cv={loss_std/loss_mean:.2%}"
+                    f"cv={cv:.2%}"
                 )
         
         return issues
@@ -552,6 +922,7 @@ class StableTrainer:
         self.loss_scale = 1.0                 # 損失縮放因子 (混合精度訓練)
         self.warmup_steps = 0                 # 學習率預熱步數
         self.gradient_accumulation_steps = 1  # 梯度累積步數
+        self.base_lr = None                   # 保存原始學習率（用於預熱）
         
     def setup_optimizer_and_scheduler(self, learning_rate: float = 1e-3,
                                     weight_decay: float = 1e-4,
@@ -597,6 +968,10 @@ class StableTrainer:
             betas=(0.9, 0.999)          # 動量參數
         )
         
+        # 保存原始學習率（用於預熱）
+        # 這樣在預熱時可以正確計算當前學習率
+        self.base_lr = learning_rate
+        
         # 設置學習率預熱
         if use_warmup:
             # 預熱步數設為第一個epoch的10%
@@ -629,33 +1004,105 @@ class StableTrainer:
         這個方法實現學習率預熱機制，在訓練初期逐步增加學習率，
         有助於穩定訓練過程和改善收斂效果。
         
+        為什麼需要學習率預熱？
+        - 訓練初期參數是隨機初始化的，梯度可能很大
+        - 如果一開始就使用大學習率，可能導致訓練不穩定
+        - 預熱可以讓模型"溫和地"開始訓練，避免突然的大幅更新
+        - 特別適合大模型、大批量訓練、Transformer 等場景
+        
         參數:
-            step (int): 當前訓練步數
+            step (int): 當前訓練步數（從0開始）
+                      注意：這應該是全局步數，不是批次索引
         
         預熱策略:
         - 線性預熱：學習率從0線性增加到目標學習率
+          公式：lr(step) = base_lr * (step / warmup_steps)
+          例如：base_lr=1e-3, warmup_steps=1000
+          step=0:   lr = 1e-3 * (0/1000) = 0
+          step=500: lr = 1e-3 * (500/1000) = 5e-4
+          step=1000: lr = 1e-3 * (1000/1000) = 1e-3
+        
         - 預熱步數：在warmup_steps步內完成預熱
+          通常設置為總訓練步數的 5-10%
+          例如：10000 步訓練，warmup_steps = 500-1000
+        
         - 平滑過渡：避免學習率突然變化
+          線性預熱提供平滑的過渡，不會有突然的跳躍
         
         技術細節:
         - 只在預熱階段調整學習率
+          如果 step >= warmup_steps，不執行任何操作
+          此時學習率調度器會接管學習率調整
+        
         - 預熱因子 = step / warmup_steps
+          範圍從 0 到 1
+          step=0 時，因子=0，學習率=0
+          step=warmup_steps 時，因子=1，學習率=base_lr
+        
         - 預熱完成後使用正常學習率
+          預熱階段結束後，學習率調度器（如 cosine）會繼續調整
+        
+        - 支持多參數組
+          如果優化器有多個參數組（如不同層使用不同學習率），
+          會同時更新所有參數組的學習率
+        
+        預熱步數設置建議:
+        - 小模型（< 1M 參數）：warmup_steps = 總步數的 5%
+        - 中等模型（1M - 100M）：warmup_steps = 總步數的 10%
+        - 大模型（> 100M）：warmup_steps = 總步數的 10-20%
+        - Transformer 模型：通常使用 4000-10000 步預熱
         
         使用示例:
+            # 設置預熱步數
+            trainer.warmup_steps = 1000
+            
+            # 在訓練循環中調用
             for step in range(total_steps):
-                trainer.warmup_lr(step)
+                trainer.warmup_lr(step)  # 在每個步驟調用
+                
                 # 執行訓練步驟
+                loss.backward()
+                trainer.clip_gradients()
+                optimizer.step()
+                
+                # 檢查當前學習率
+                current_lr = optimizer.param_groups[0]['lr']
+                if step % 100 == 0:
+                    print(f"Step {step}, LR: {current_lr:.6f}")
+        
+        注意事項:
+        - 必須在每個訓練步驟調用
+        - step 應該是全局步數，不是批次索引
+        - 預熱階段結束後，學習率調度器會接管
+        - 如果 warmup_steps=0，不會執行任何操作
+        
+        與學習率調度器的配合:
+        - 預熱階段：warmup_lr() 控制學習率
+        - 預熱後：學習率調度器（如 CosineAnnealingLR）控制學習率
+        - 兩者可以無縫配合，預熱完成後平滑過渡到調度器
         """
         # 只在預熱階段調整學習率
+        # 如果當前步數 >= 預熱步數，不執行任何操作
+        # 此時學習率應該已經達到目標值，由調度器接管
         if step < self.warmup_steps:
             # 計算預熱因子：從0線性增加到1
+            # 公式：warmup_factor = step / warmup_steps
+            # step=0: factor=0, step=warmup_steps: factor=1
+            # 這提供了一個線性的預熱曲線
             warmup_factor = step / self.warmup_steps
             
             # 更新所有參數組的學習率
+            # 優化器可能有多個參數組（param_groups）
+            # 例如：不同層使用不同學習率，或不同參數類型
+            # 我們需要更新所有參數組的學習率
             for param_group in self.optimizer.param_groups:
                 # 學習率 = 原始學習率 × 預熱因子
-                param_group['lr'] = param_group['lr'] * warmup_factor
+                # 使用保存的 base_lr 或參數組的原始學習率
+                # 如果 base_lr 已設置，使用它；否則使用參數組的初始學習率
+                original_lr = self.base_lr if self.base_lr is not None else param_group.get('initial_lr', param_group['lr'])
+                # 在預熱階段，實際學習率 = original_lr * warmup_factor
+                # 這樣可以確保預熱完成後學習率正好是 original_lr
+                param_group['lr'] = original_lr * warmup_factor
     
     def clip_gradients(self):
         """
@@ -664,29 +1111,86 @@ class StableTrainer:
         這個方法實現梯度裁剪技術，用於防止梯度爆炸問題。
         梯度裁剪通過限制梯度范數來保持訓練穩定性。
         
+        梯度裁剪的原理:
+        - 當梯度范數過大時，會導致參數更新過大，訓練不穩定
+        - 梯度裁剪通過縮放梯度來限制更新幅度
+        - 保持梯度方向不變，只改變梯度大小
+        - 公式：g_clipped = g * min(1, max_grad_norm / ||g||)
+        
         技術細節:
         - 使用L2范數進行梯度裁剪
+          計算所有參數梯度的總L2范數：||g|| = sqrt(Σ||gᵢ||²)
+        
         - 只裁剪范數超過閾值的梯度
+          如果 ||g|| <= max_grad_norm，不進行裁剪
+          如果 ||g|| > max_grad_norm，按比例縮放
+        
         - 保持梯度方向不變
+          只改變梯度的大小（magnitude），不改變方向（direction）
+          這確保了優化方向的正確性
+        
         - 防止梯度爆炸和數值不穩定
+          梯度爆炸會導致參數更新過大，可能導致：
+          * 損失值突然跳躍或變成 NaN
+          * 權重值異常大
+          * 訓練完全崩潰
         
         裁剪策略:
         - 計算所有參數梯度的總范數
+          使用 torch.nn.utils.clip_grad_norm_() 函數
+          該函數會自動計算所有參數的總L2范數
+        
         - 如果總范數超過max_grad_norm，則縮放所有梯度
-        - 縮放因子 = max_grad_norm / 實際范數
+          縮放因子 = max_grad_norm / 實際范數
+          例如：如果 max_grad_norm=1.0，實際范數=5.0
+          則縮放因子 = 1.0 / 5.0 = 0.2
+          所有梯度都會乘以 0.2
+        
+        - 如果總范數不超過閾值，不進行任何操作
+          保持原始梯度不變
+        
+        參數設置建議:
+        - max_grad_norm = 1.0: 標準設置，適用於大多數情況
+        - max_grad_norm = 0.5: 更保守，適合不穩定的模型
+        - max_grad_norm = 5.0: 更寬鬆，適合穩定的模型
+        - max_grad_norm = 0: 禁用梯度裁剪（不推薦）
         
         使用示例:
             # 在反向傳播後調用
             loss.backward()
-            trainer.clip_gradients()
-            optimizer.step()
+            trainer.clip_gradients()  # 裁剪梯度
+            optimizer.step()          # 更新參數
+            
+            # 檢查裁剪效果
+            grad_stats = trainer.diagnostics.check_gradient_norms(model)
+            print(f"裁剪後梯度范數: {grad_stats['total_norm']:.4f}")
+        
+        注意事項:
+        - 必須在 loss.backward() 之後、optimizer.step() 之前調用
+        - 梯度裁剪會修改梯度值，確保在優化器更新前調用
+        - 如果 max_grad_norm <= 0，不會執行任何操作
+        - 梯度裁剪是原地操作（in-place），直接修改梯度值
+        
+        與其他技術的配合:
+        - 可以與學習率調度器配合使用
+        - 可以與梯度累積配合使用（在累積後裁剪）
+        - 可以與混合精度訓練配合使用
         """
         # 只在設置了梯度裁剪閾值時執行
+        # max_grad_norm > 0 表示啟用梯度裁剪
+        # max_grad_norm = 0 表示禁用梯度裁剪
         if self.max_grad_norm > 0:
             # 使用PyTorch的梯度裁剪函數
+            # clip_grad_norm_() 是原地操作（in-place），直接修改梯度值
+            # 函數會：
+            # 1. 計算所有參數梯度的總L2范數
+            # 2. 如果范數 > max_grad_norm，按比例縮放所有梯度
+            # 3. 返回實際的梯度范數（可用於監控）
             torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(),  # 要裁剪的參數
+                self.model.parameters(),  # 要裁剪的參數列表
+                                          # 使用 model.parameters() 獲取所有參數
                 self.max_grad_norm        # 最大梯度范數閾值
+                                          # 如果梯度范數超過此值，會被縮放到此值
             )
     
     def check_model_health(self, step: int) -> bool:

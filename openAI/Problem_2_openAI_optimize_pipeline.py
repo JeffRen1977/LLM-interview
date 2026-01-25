@@ -421,19 +421,113 @@ class OptimizedMLPipeline:
         return model
     
     def optimize_inference(self, model, X_test, batch_size=1000):
-        """优化推理过程"""
-        print("⚡ Starting batch inference optimization...")
-        start_time = time.time()
+        """
+        优化推理过程 - 使用批量处理减少内存使用和提高效率
         
-        predictions = []
+        这个函数的主要目的是：
+        1. 避免一次性加载所有数据到内存（防止内存溢出）
+        2. 通过批量处理提高大规模数据集的推理效率
+        3. 支持内存受限环境下的推理
+        
+        优化策略：
+        - 批量处理：将数据分成小批次处理，减少峰值内存使用
+        - 内存管理：处理完一批后释放内存，避免内存累积
+        - 性能监控：记录推理时间，便于性能分析
+        
+        Args:
+            model: 训练好的机器学习模型
+                  必须实现 predict() 方法（如 scikit-learn 模型）
+                  支持的类型：RandomForest, XGBoost, LightGBM 等
+            
+            X_test: 测试数据
+                   类型：numpy array 或 pandas DataFrame
+                   形状：(n_samples, n_features)
+                   注意：数据应该已经经过与训练数据相同的预处理
+            
+            batch_size (int, optional): 每批处理的数据量，默认 1000
+                    - 较小的 batch_size (100-500): 使用更少内存，适合内存受限环境
+                    - 中等 batch_size (1000-5000): 平衡内存和速度，推荐选择
+                    - 较大的 batch_size (10000+): 更快但需要更多内存
+                    - 选择建议：
+                      * 小数据集 (<10K): 1000-5000
+                      * 中等数据集 (10K-100K): 500-2000
+                      * 大数据集 (>100K): 100-1000
+        
+        Returns:
+            predictions: numpy array
+                        形状: (n_samples,)
+                        包含所有样本的预测结果
+                        注意：结果与一次性处理完全相同，只是处理方式不同
+        
+        Example:
+            >>> from sklearn.ensemble import RandomForestClassifier
+            >>> model = RandomForestClassifier()
+            >>> model.fit(X_train, y_train)
+            >>> 
+            >>> pipeline = OptimizedMLPipeline()
+            >>> predictions = pipeline.optimize_inference(model, X_test, batch_size=1000)
+            >>> print(f"预测了 {len(predictions)} 个样本")
+        
+        Performance:
+            - 内存使用：峰值内存 = 模型大小 + batch_size * 特征数 * 8 bytes
+            - 时间：通常与一次性处理相近，但更稳定
+            - 优势：可以处理超出内存限制的大数据集
+        """
+        print("⚡ Starting batch inference optimization...")
+        start_time = time.time()  # 记录开始时间，用于性能监控
+        
+        predictions = []  # 存储所有批次的预测结果
         
         # 批量推理以减少内存使用
+        # 核心思想：将大数据集分成多个小批次，逐批处理
+        # 
+        # 批次索引计算：
+        # range(0, len(X_test), batch_size) 生成批次起始索引
+        # 例如：len(X_test)=3500, batch_size=1000
+        # 生成: [0, 1000, 2000, 3000]
+        # 
+        # 批次划分：
+        # 批次 0: X_test[0:1000]     → 样本 0-999    (1000 个)
+        # 批次 1: X_test[1000:2000]   → 样本 1000-1999 (1000 个)
+        # 批次 2: X_test[2000:3000]   → 样本 2000-2999 (1000 个)
+        # 批次 3: X_test[3000:3500]   → 样本 3000-3499 (500 个，最后一批可能小于 batch_size)
         for i in range(0, len(X_test), batch_size):
+            # 提取当前批次的数据
+            # 切片操作：X_test[i:i+batch_size]
+            # - 优点：自动处理最后一批（可能小于 batch_size）
+            # - 类型：保持 X_test 的原始类型（DataFrame 或 array）
             batch = X_test[i:i+batch_size]
+            
+            # 对当前批次进行预测
+            # model.predict() 是 scikit-learn 模型的标准方法
+            # 返回：该批次的预测结果，形状为 (batch_size,) 或 (实际样本数,)
+            # 注意：对于最后一批，实际样本数可能小于 batch_size
             batch_pred = model.predict(batch)
+            
+            # 将当前批次的预测结果添加到总列表中
+            # extend() 方法将 batch_pred 的所有元素逐个添加到 predictions
+            # 例如：
+            #   batch_pred = [0, 1, 0, 1]
+            #   predictions.extend(batch_pred)
+            #   结果：predictions = [..., 0, 1, 0, 1]
+            # 
+            # 为什么不使用 append()？
+            #   append() 会将整个列表作为一个元素添加：
+            #   predictions.append(batch_pred) → [[0, 1, 0, 1], ...]
+            #   extend() 会将列表的元素逐个添加：
+            #   predictions.extend(batch_pred) → [..., 0, 1, 0, 1]
             predictions.extend(batch_pred)
         
-        print(f"   ✅ Inference completed in {time.time() - start_time:.2f}s")
+        # 性能监控：计算总耗时并输出
+        elapsed_time = time.time() - start_time
+        print(f"   ✅ Inference completed in {elapsed_time:.2f}s")
+        
+        # 将列表转换为 numpy array
+        # 原因：
+        # 1. 更高效的内存使用（连续内存布局）
+        # 2. 更好的性能（numpy 的向量化操作）
+        # 3. 与其他库的兼容性（如 scikit-learn, pandas）
+        # 4. 支持数组操作（索引、切片等）
         return np.array(predictions)
     
     def memory_optimization(self, X):
