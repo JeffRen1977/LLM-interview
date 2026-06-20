@@ -86,7 +86,9 @@ inputs = tokenizer(text, return_tensors="pt")
 
 将 `state_dict()` 序列化到磁盘，统计文件字节数：
 
-$$\text{Size (MB)} = \frac{\text{文件字节数}}{1024^2}$$
+```
+Size (MB) = 文件字节数 / 1024²
+```
 
 FP32 模型每个参数占 4 字节，大小 ≈ `参数量 × 4`。
 
@@ -226,13 +228,12 @@ _ = quantized_model(**fp16_inputs)
 
 量化完成后，代码计算四项对比指标：
 
-$$\text{压缩比} = \frac{\text{FP32 模型大小}}{\text{量化模型大小}}$$
-
-$$\text{加速比} = \frac{\text{FP32 平均延迟}}{\text{量化模型平均延迟}}$$
-
-$$\text{内存节省率} = \left(1 - \frac{\text{量化大小}}{\text{FP32 大小}}\right) \times 100\%$$
-
-$$\text{时间节省率} = \left(1 - \frac{\text{量化延迟}}{\text{FP32 延迟}}\right) \times 100\%$$
+```
+压缩比     = FP32 模型大小 / 量化模型大小
+加速比     = FP32 平均延迟 / 量化模型平均延迟
+内存节省率 = (1 - 量化大小 / FP32 大小) × 100%
+时间节省率 = (1 - 量化延迟 / FP32 延迟) × 100%
+```
 
 **经验阈值**（来自代码中的评估逻辑）：
 
@@ -307,7 +308,9 @@ python openAI/Problem_3_openAI_optimize_inference_model.py
 
 **参考答案**：
 
-$$67 \times 10^6 \times 1\ \text{byte} \approx 64\ \text{MB}$$
+```
+67 × 10⁶ × 1 byte ≈ 64 MB
+```
 
 （FP32 约为 256 MB，压缩约 4×）
 
