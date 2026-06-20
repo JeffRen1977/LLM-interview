@@ -420,4 +420,4 @@ Decode 阶段 batch=1 时，算子融合还能带来收益吗？
 
 ---
 
-*下一章预告：第 10 章将讨论 **分布式推理与模型并行**——当单卡放不下模型或 KV Cache 时，如何通过 Tensor Parallelism、Pipeline Parallelism 将推理扩展到多 GPU。*
+*下一章预告：第 10 章将讨论 **分布式推理与模型并行**——当单卡放不下模型或 KV Cache 时，如何通过 Tensor Parallelism、Pipeline Parallelism 将推理扩展到多 GPU。详见 [`chapter_10_distributed_inference.md`](chapter_10_distributed_inference.md)。*
