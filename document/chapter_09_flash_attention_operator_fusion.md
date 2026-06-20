@@ -1,6 +1,6 @@
 # 第 9 章 · FlashAttention 与算子融合：Kernel 层 Attention 优化
 
-> **本章导读**：第 8 章从**系统调度层**解决了「请求怎么组 batch、历史 K/V 怎么缓存」的问题——KV Cache 让 Decode 不再重复计算，Continuous Batching 让 GPU 不再空转。但 Attention 本身仍是推理中最贵、最吃内存带宽的操作。本章下沉到 **GPU Kernel 层**，讲解 **FlashAttention** 与 **算子融合**——从算法与硬件 IO 视角进一步压缩 Attention 的内存与计算开销，与 KV Cache 形成「**系统 + 算子**」双层优化。
+> **本章导读**：第 8 章从**系统调度层**解决了「请求怎么组 batch、历史 K/V 怎么缓存」的问题——KV Cache 让 Decode 不再重复计算，Continuous Batching 让 GPU 不再空转。但 Attention 本身仍是推理中最贵、最吃内存带宽的操作。本章下沉到 **GPU Kernel 层**，讲解 **FlashAttention** 与 **算子融合**——从算法与硬件 IO 视角进一步压缩 Attention 的内存与计算开销，与 KV Cache 形成「**系统 + 算子**」双层优化。**全部可运行代码见一个文件**：[`basic/chapter_09_flash_attention_operator_fusion.py`](../basic/chapter_09_flash_attention_operator_fusion.py)
 
 ---
 
@@ -42,7 +42,7 @@ LLM 推理优化可以分成两个正交的层次：
 
 ## 9.2 标准 Attention 的内存瓶颈
 
-回顾标准 Scaled Dot-Product Attention（见 `basic/transformer_implementation.py`）：
+回顾标准 Scaled Dot-Product Attention。**本章全部可运行代码见一个文件**：[`basic/chapter_09_flash_attention_operator_fusion.py`](../basic/chapter_09_flash_attention_operator_fusion.py)
 
 ```python
 # 标准实现（概念示意）
@@ -351,7 +351,7 @@ model = AutoModelForCausalLM.from_pretrained(
 | **第 7 章 / Problem 3** | 模型层 | INT8/FP16 量化 |
 | **第 8 章** | 系统调度层 | KV Cache、Continuous Batching |
 | **第 9 章（本章）** | 算子 / Kernel 层 | FlashAttention、算子融合 |
-| **`basic/transformer_implementation.py`** | 教学参考 | 标准 Attention 实现（未优化 IO） |
+| **`basic/chapter_09_flash_attention_operator_fusion.py`** | **本章全部代码（一个文件）** | 标准 Attention、FlashAttention、Online Softmax、KV Cache、算子融合、PyTorch SDPA |
 
 标准 Attention 实现（本章的「优化前」对照）：
 
@@ -412,7 +412,8 @@ Decode 阶段 batch=1 时，算子融合还能带来收益吗？
 
 - 第 7 章：[`document/chapter_07_model_quantization.md`](chapter_07_model_quantization.md) — 模型量化与推理优化
 - 第 8 章：[`document/chapter_08_inference_pipeline.md`](chapter_08_inference_pipeline.md) — KV Cache 与 Continuous Batching
-- 标准 Attention 实现：`basic/transformer_implementation.py`
+- **本章全部代码（一个文件）**：[`basic/chapter_09_flash_attention_operator_fusion.py`](../basic/chapter_09_flash_attention_operator_fusion.py) — 运行 `python3 basic/chapter_09_flash_attention_operator_fusion.py`
+- 标准 Attention 扩展阅读：`basic/transformer_implementation.py`（含完整 Multi-Head Attention）
 - FlashAttention 论文：[FlashAttention (NeurIPS 2022)](https://arxiv.org/abs/2205.14135)、[FlashAttention-2 (2023)](https://arxiv.org/abs/2307.08691)
 - 代码库：[Dao-AILab/flash-attention](https://github.com/Dao-AILab/flash-attention)
 - OpenAI 面试题梳理：`openAI/openAI_questions.md`（算子融合与 FlashAttention 章节）
