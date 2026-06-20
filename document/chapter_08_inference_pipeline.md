@@ -349,6 +349,7 @@ KV Cache 占 1 GB，模型权重 INT8 量化后 2 GB，GPU 共 24 GB。理论上
 - 第 7 章：[`document/chapter_07_model_quantization.md`](chapter_07_model_quantization.md) — 模型量化与推理优化
 - 第 9 章：[`document/chapter_09_flash_attention_operator_fusion.md`](chapter_09_flash_attention_operator_fusion.md) — FlashAttention 与算子融合
 - 第 10 章：[`document/chapter_10_distributed_inference.md`](chapter_10_distributed_inference.md) — 分布式推理与模型并行
+- 第 11 章：[`document/chapter_11_speculative_decoding.md`](chapter_11_speculative_decoding.md) — Speculative Decoding
 - 代码实现：`openAI/Problem_3_openAI_optimize_inference_model.py`
 - Problem 2 批处理基础：`openAI/Problem_2_openAI_optimize_pipeline.py`
 - OpenAI 面试题梳理：`openAI/openAI_questions.md`

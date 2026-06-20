@@ -348,4 +348,4 @@ PP 靠 **micro-batch 流水线** 填气泡。Decode 每步只处理 1 token，ba
 
 ---
 
-*下一章预告：第 11 章将讨论 **Speculative Decoding 与推理加速**——用小型 Draft 模型预测、大型 Target 模型验证，在不损失质量的前提下进一步降低 Decode 延迟。*
+*下一章预告：第 11 章将讨论 **Speculative Decoding 与推理加速**——用小型 Draft 模型预测、大型 Target 模型验证，在不损失质量的前提下进一步降低 Decode 延迟。详见 [`chapter_11_speculative_decoding.md`](chapter_11_speculative_decoding.md)。*
