@@ -286,4 +286,4 @@ TTFT 由 **Prefill**（处理用户 prompt）决定。Speculative 发生在 **De
 
 ---
 
-*下一章预告：第 12 章将讨论 **推理监控与 SLA**——TTFT、TPOT、P99 延迟、吞吐与成本如何在生产环境中度量、告警与容量规划。*
+*下一章预告：第 12 章将讨论 **推理监控与 SLA**——TTFT、TPOT、P99 延迟、吞吐与成本如何在生产环境中度量、告警与容量规划。详见 [`chapter_12_inference_monitoring_sla.md`](chapter_12_inference_monitoring_sla.md)。*
