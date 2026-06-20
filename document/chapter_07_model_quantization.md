@@ -220,7 +220,7 @@ _ = quantized_model(**fp16_inputs)
 - **算子融合**：将多个连续操作合并为一个 Kernel，减少启动开销
 - **FlashAttention**：分块计算 Attention，降低内存占用并加速
 
-这些属于运行时优化，与第 8 章的系统调度层优化互补。
+这些属于运行时优化，与第 8 章的系统调度层优化互补。详见第 9 章：[`document/chapter_09_flash_attention_operator_fusion.md`](chapter_09_flash_attention_operator_fusion.md)。
 
 ---
 

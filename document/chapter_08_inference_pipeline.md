@@ -347,10 +347,11 @@ KV Cache 占 1 GB，模型权重 INT8 量化后 2 GB，GPU 共 24 GB。理论上
 ## 相关资源
 
 - 第 7 章：[`document/chapter_07_model_quantization.md`](chapter_07_model_quantization.md) — 模型量化与推理优化
+- 第 9 章：[`document/chapter_09_flash_attention_operator_fusion.md`](chapter_09_flash_attention_operator_fusion.md) — FlashAttention 与算子融合
 - 代码实现：`openAI/Problem_3_openAI_optimize_inference_model.py`
 - Problem 2 批处理基础：`openAI/Problem_2_openAI_optimize_pipeline.py`
 - OpenAI 面试题梳理：`openAI/openAI_questions.md`
 
 ---
 
-*下一章预告：第 9 章将讨论 **FlashAttention** 与 **算子融合**——从 Kernel 层面进一步降低 Attention 的内存与计算开销，与 KV Cache 形成「系统 + 算子」双层优化。*
+*下一章预告：第 9 章将讨论 **FlashAttention** 与 **算子融合**——从 Kernel 层面进一步降低 Attention 的内存与计算开销，与 KV Cache 形成「系统 + 算子」双层优化。详见 [`chapter_09_flash_attention_operator_fusion.md`](chapter_09_flash_attention_operator_fusion.md)。*
