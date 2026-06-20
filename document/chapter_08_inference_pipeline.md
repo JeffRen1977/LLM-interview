@@ -1,6 +1,6 @@
 # 第 8 章 · 推理流水线：批处理、KV Cache 与连续批处理
 
-> **本章导读**：第 7 章通过量化把「单个模型」变轻、变快。但线上服务真正的瓶颈，往往不在模型权重，而在**请求如何调度、GPU 是否被喂饱、自回归生成是否重复计算**。本章从推理流水线出发，讲解批处理策略、KV Cache 与 Continuous Batching——这三项是 modern LLM serving 系统的核心武器。
+> **本章导读**：第 7 章通过量化把「单个模型」变轻、变快。但线上服务真正的瓶颈，往往不在模型权重，而在**请求如何调度、GPU 是否被喂饱、自回归生成是否重复计算**。本章从推理流水线出发，讲解批处理策略、KV Cache 与 Continuous Batching——这三项是 modern LLM serving 系统的核心武器。**全部可运行代码见一个文件**：[`basic/chapter_08_inference_pipeline.py`](../basic/chapter_08_inference_pipeline.py)
 
 ---
 
@@ -294,6 +294,7 @@ while running_requests:
 | **第 7 章 / Problem 3** | 模型层 | INT8 量化、FP16、压缩比 |
 | **Problem 2** | 数据流水线层 | 固定 batch 分批推理（传统 ML） |
 | **第 8 章（本章）** | 系统调度层 | KV Cache、Continuous Batching |
+| **`basic/chapter_08_inference_pipeline.py`** | 本章全部代码 | 静态/连续批处理、KV Cache、PagedAttention、调度器 |
 
 Problem 2 的批处理：
 
@@ -347,6 +348,7 @@ KV Cache 占 1 GB，模型权重 INT8 量化后 2 GB，GPU 共 24 GB。理论上
 ## 相关资源
 
 - 第 7 章：[`document/chapter_07_model_quantization.md`](chapter_07_model_quantization.md) — 模型量化与推理优化
+- **本章全部代码（一个文件）**：[`basic/chapter_08_inference_pipeline.py`](../basic/chapter_08_inference_pipeline.py) — 运行 `python3 basic/chapter_08_inference_pipeline.py`
 - 第 9 章：[`document/chapter_09_flash_attention_operator_fusion.md`](chapter_09_flash_attention_operator_fusion.md) — FlashAttention 与算子融合
 - 第 10 章：[`document/chapter_10_distributed_inference.md`](chapter_10_distributed_inference.md) — 分布式推理与模型并行
 - 第 11 章：[`document/chapter_11_speculative_decoding.md`](chapter_11_speculative_decoding.md) — Speculative Decoding

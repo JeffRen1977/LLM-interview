@@ -1,6 +1,6 @@
 # 第 7 章 · 大型语言模型的高效推理优化
 
-> **本章导读**：训练让模型「学会」，推理让模型「用起来」。当 DistilBERT、BERT、GPT 等模型部署到线上时，真正的瓶颈往往不是精度，而是**延迟、内存和吞吐**。本节以 DistilBERT 情感分类模型为例，系统介绍一套可落地的推理优化流程：基准测量 → 量化压缩 → 效果评估 → 生产部署。对应代码实现见 `openAI/Problem_3_openAI_optimize_inference_model.py`。
+> **本章导读**：训练让模型「学会」，推理让模型「用起来」。当 DistilBERT、BERT、GPT 等模型部署到线上时，真正的瓶颈往往不是精度，而是**延迟、内存和吞吐**。本节以 DistilBERT 情感分类模型为例，系统介绍一套可落地的推理优化流程：基准测量 → 量化压缩 → 效果评估 → 生产部署。**全部可运行代码见一个文件**：[`basic/chapter_07_model_quantization.py`](../basic/chapter_07_model_quantization.py)；完整 DistilBERT 流水线另见 `openAI/Problem_3_openAI_optimize_inference_model.py`。
 
 ---
 
@@ -34,7 +34,7 @@
 
 ## 7.2 完整优化流水线
 
-`Problem_3_openAI_optimize_inference_model.py` 实现了以下四步流程：
+`Problem_3_openAI_optimize_inference_model.py` 与 [`basic/chapter_07_model_quantization.py`](../basic/chapter_07_model_quantization.py) 实现了以下四步流程：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -279,6 +279,13 @@ _ = quantized_model(**fp16_inputs)
 ### 运行 Demo
 
 ```bash
+# 概念 demo（无需下载模型）
+python3 basic/chapter_07_model_quantization.py
+
+# 完整 DistilBERT 基准（需 transformers + 网络）
+python3 basic/chapter_07_model_quantization.py --full
+
+# 原版详细演示（含中文输出）
 python openAI/Problem_3_openAI_optimize_inference_model.py
 ```
 
@@ -329,7 +336,8 @@ python openAI/Problem_3_openAI_optimize_inference_model.py
 
 ## 相关资源
 
-- 代码实现：`openAI/Problem_3_openAI_optimize_inference_model.py`
+- **本章全部代码（一个文件）**：[`basic/chapter_07_model_quantization.py`](../basic/chapter_07_model_quantization.py) — 运行 `python3 basic/chapter_07_model_quantization.py`
+- 完整 DistilBERT 流水线：`openAI/Problem_3_openAI_optimize_inference_model.py`
 - 面试题梳理：`openAI/openAI_questions.md`（Problem 3 章节）
 - 下一章：[`document/chapter_08_inference_pipeline.md`](chapter_08_inference_pipeline.md) — 批处理、KV Cache 与 Continuous Batching
 
