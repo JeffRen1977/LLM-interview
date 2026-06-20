@@ -487,9 +487,11 @@ class LinearAttention(nn.Module):
         self.d_model = d_model
         self.projected_dim = projected_dim
         
-        # 投影矩阵：将序列长度从 N 投影到 k
+        # 投影矩阵：将特征维度从 d_model 投影到 projected_dim
+        self.E_q = nn.Linear(d_model, projected_dim, bias=False)  # Query 投影
         self.E_k = nn.Linear(d_model, projected_dim, bias=False)  # Key 投影
         self.E_v = nn.Linear(d_model, projected_dim, bias=False)  # Value 投影
+        self.E_o = nn.Linear(projected_dim, d_model, bias=False)  # 输出投影回原始维度
         
         self.dropout = nn.Dropout(dropout)
     
@@ -510,38 +512,39 @@ class LinearAttention(nn.Module):
         """
         batch_size, seq_len, d_model = query.shape
         
-        # 步骤 1: 投影 key 和 value 到低维空间
-        # key: [batch_size, seq_len, d_model] -> [batch_size, projected_dim, d_model]
-        # value: [batch_size, seq_len, d_model] -> [batch_size, projected_dim, d_model]
-        # 注意：这里我们投影特征维度，而不是序列维度（简化实现）
-        K_proj = self.E_k(key)  # [batch_size, seq_len, projected_dim]
-        V_proj = self.E_v(value)  # [batch_size, seq_len, projected_dim]
+        # 步骤 1: 投影 Q, K, V 到低维空间
+        # 将特征维度从 d_model 投影到 projected_dim
+        Q_proj = self.E_q(query)   # [batch_size, seq_len, projected_dim]
+        K_proj = self.E_k(key)     # [batch_size, seq_len, projected_dim]
+        V_proj = self.E_v(value)   # [batch_size, seq_len, projected_dim]
         
         # 步骤 2: 计算注意力分数
-        # query: [batch_size, seq_len, d_model]
+        # Q_proj: [batch_size, seq_len, projected_dim]
         # K_proj: [batch_size, seq_len, projected_dim]
-        # scores: [batch_size, seq_len, projected_dim]
-        attention_scores = torch.matmul(query, K_proj.transpose(-2, -1)) / math.sqrt(d_model)
+        # K_proj.transpose(-2, -1): [batch_size, projected_dim, seq_len]
+        # attention_scores: [batch_size, seq_len, seq_len]
+        attention_scores = torch.matmul(Q_proj, K_proj.transpose(-2, -1)) / math.sqrt(self.projected_dim)
         
-        # 应用掩码（如果提供，但线性注意力的掩码处理较复杂）
+        # 应用掩码（如果提供）
         if mask is not None:
-            # 简化处理：对投影后的维度应用平均掩码
-            mask_avg = mask.float().mean(dim=-1, keepdim=True)  # [batch_size, seq_len, 1]
-            attention_scores = attention_scores * mask_avg
+            # mask: [batch_size, seq_len] 或 [batch_size, seq_len, seq_len]
+            if mask.dim() == 2:
+                mask = mask.unsqueeze(1)  # [batch_size, 1, seq_len]
+            attention_scores = attention_scores.masked_fill(mask == 0, float('-inf'))
         
         # 步骤 3: 计算注意力权重
-        attention_weights = F.softmax(attention_scores, dim=-1)
+        attention_weights = F.softmax(attention_scores, dim=-1)  # [batch_size, seq_len, seq_len]
         attention_weights = self.dropout(attention_weights)
         
         # 步骤 4: 计算输出
-        # attention_weights: [batch_size, seq_len, projected_dim]
+        # attention_weights: [batch_size, seq_len, seq_len]
         # V_proj: [batch_size, seq_len, projected_dim]
         # output: [batch_size, seq_len, projected_dim]
         output = torch.matmul(attention_weights, V_proj)
         
-        # 步骤 5: 投影回原始维度（如果需要）
-        # 这里简化实现，直接返回投影后的输出
-        # 实际应用中可能需要额外的投影层
+        # 步骤 5: 投影回原始维度
+        # output: [batch_size, seq_len, projected_dim] -> [batch_size, seq_len, d_model]
+        output = self.E_o(output)
         
         return output, attention_weights
 
