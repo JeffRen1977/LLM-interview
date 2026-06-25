@@ -91,6 +91,144 @@ Snapdragon NPU / GPU / CPU
 - PagedAttention 解决什么问题？
 - TTFT、TPOT、E2E 延迟如何估算？
 
+#### 面试参考答案
+
+##### Q1. Prefill 和 Decode 瓶颈有何不同？
+
+LLM 自回归推理分 **两阶段**，瓶颈类型完全不同：
+
+| | **Prefill（提示词阶段）** | **Decode（生成阶段）** |
+|--|--------------------------|------------------------|
+| **输入** | 用户 prompt 的 **全部 token**（长度 L） | 每步 **1 个新 token** |
+| **在算什么** | 对 L 个 token 做完整 forward；建立 KV Cache | 只算新 token 的 Q/K/V；Attention 要读 **全部历史 KV** |
+| **瓶颈类型** | **Compute-bound**（计算密集） | **Memory-bound**（内存带宽密集） |
+| **为何** | 大矩阵乘（QKV、FFN），GPU/NPU **算力**打满 | 每步矩阵很小，但要 **读越来越长的 KV Cache**；算力空闲等 HBM/DRAM |
+| **主导指标** | **TTFT**（首 token 时间） | **TPOT**（每输出 token 时间） |
+| **典型优化** | FlashAttention、大 batch prefill、Chunked Prefill、TP | KV Cache、Continuous Batching、GQA、算子融合、Speculative Decoding |
+| **Attention 复杂度** | O(L²)（整段 prompt 互相关注） | 每步 O(L) 读 cache，L 随生成变长 |
+
+```
+用户 prompt: "请写一首关于春天的诗"
+      │
+      ▼ Prefill（一次吃完 L 个 token）
+  大矩阵乘 · 算力瓶颈 · 决定 TTFT
+      │  写出 KV Cache
+      ▼ Decode（每次 1 token：春 → 风 → 拂 → …）
+  小矩阵乘 + 读全部 KV · 带宽瓶颈 · 决定 TPOT
+```
+
+**白板一句话**：
+
+> **Prefill 是「一口气算完 prompt」，吃算力；Decode 是「每步只算 1 token 但要翻整本历史 KV」，吃带宽。**
+
+**端侧（Qualcomm）补充**：手机没有 80GB HBM，**Decode 时 DRAM 读 KV + 读权重** 更致命；长 context 时 Prefill 还会 **一次性占满算力和内存**。Genie 部署要同时盯 **TTFT（prefill）** 和 **TPOT（decode）+ KV 占用**。
+
+---
+
+##### Q2. KV Cache 是什么？不用的话复杂度怎样？
+
+**KV Cache**：把每一层 Attention 里，历史 token 算好的 **Key、Value** 缓存在内存里；Decode 每步 **只算新 token 的 Q/K/V**，Attention 时新 Q 与 **缓存的全部 K** 做内积。
+
+**没有 KV Cache**（朴素自回归）：
+
+```
+生成第 t 个 token 时，输入 [tok₁…tok_{t-1}]，对全部 t-1 个 token 重新 forward
+→ 每步重复算历史 token 的 Q/K/V
+→ 生成 T 个 token 总计算量 ~ O(T²)（每层 Attention 近似）
+```
+
+**有 KV Cache**：
+
+```
+Prefill：算 prompt 的 K/V 并缓存
+Decode 每步：只算 1 个新 token 的 Q/K/V，追加进 cache；Attention 读 cache
+→ 生成 T 个 token 总计算量 ~ O(T)（每步读长度为 L 的 cache，L 线性增长）
+```
+
+| | 无 KV Cache | 有 KV Cache |
+|--|-------------|-------------|
+| Decode 每步 | 重算全部历史 | 只算 1 个新 token |
+| 时间复杂度（生成 T token） | ~O(T²) | ~O(T)（但每步要读 O(L) 的 KV） |
+| 代价 | 计算爆炸 | **内存**：每层每 token 存 K/V，随序列变长线性涨 |
+
+**KV 显存粗算**（单层、单请求）：
+
+```
+KV_bytes ≈ 2 × num_layers × seq_len × num_kv_heads × head_dim × bytes_per_elem
+```
+
+（因子 2 = K 和 V；GQA 用 `num_kv_heads` 而不是 `num_heads`。）
+
+---
+
+##### Q3. Continuous Batching vs 静态 batch？
+
+| | **静态批处理（Static Batching）** | **连续批处理（Continuous Batching）** |
+|--|-----------------------------------|---------------------------------------|
+| **组 batch 时机** | 请求到达时凑一批 | **每个 decode step** 重新组 batch |
+| **请求完成后** | 等整批 **最慢** 的请求结束才释放 | 完成即退出，slot 立刻给新请求 |
+| **Decode 问题** | 各请求生成长度不同 → **早完成的空等** | 每步动态进出，GPU 利用率高 |
+| **Padding** | 按最长序列 pad，短请求浪费算力 | Iteration-level，decode 时通常无 pad |
+| **实现** | 简单 | 复杂（调度器 + KV 管理） |
+| **代表** | 早期 Triton | **vLLM**、TGI、TensorRT-LLM |
+
+**类比**：静态 batch = 等满一班车再开；Continuous Batching = 地铁每站可上下人。
+
+**注意**：Continuous Batching 主要优化 **Decode 吞吐**；Prefill 仍可单独 batch 或 Chunked Prefill。
+
+---
+
+##### Q4. PagedAttention 解决什么问题？
+
+**问题**：Continuous Batching 下，每个请求 KV Cache 长度 **动态变化**，若预分配「最大长度」连续内存 → **碎片严重、浪费显存**，并发数上不去。
+
+**PagedAttention**（vLLM）：把 KV Cache 切成固定大小 **block**（类似 OS 虚拟内存页），用 **block table** 映射逻辑位置 → 物理块，按需分配/回收。
+
+| 没有 Paging | 有 PagedAttention |
+|-------------|-------------------|
+| 每请求占一段连续 max_len 空间 | 按实际长度分配 block |
+| 长短请求交错 → 碎片 | 块级复用，显存利用率高 |
+| 并发 slot 少 | **同卡跑更多并发请求** |
+
+**一句话**：KV Cache 的 **内存管理器**，不是新 Attention 算法；解决 **碎片 + 动态长度** 下的显存效率。
+
+---
+
+##### Q5. TTFT、TPOT、E2E 延迟如何估算？
+
+| 指标 | 含义 | 主要受谁影响 |
+|------|------|--------------|
+| **TTFT** | 请求发出 → **第一个输出 token** | 排队 + **Prefill** + 调度 |
+| **TPOT** | 相邻输出 token 的平均间隔 | **Decode**、KV 带宽、batch 大小 |
+| **E2E** | 请求发出 → **最后一个 token** | TTFT + (输出长度 − 1) × TPOT |
+
+**粗算公式**：
+
+```
+E2E ≈ TTFT + (num_output_tokens − 1) × TPOT
+
+# 若还要加排队（服务端）
+TTFT ≈ queue_wait + prefill_time + decode_first_token_overhead
+```
+
+**数量级直觉**（7B 级、单卡 A100、中等 prompt，仅作面试量级感）：
+
+- Prefill 1000 token：几十～几百 ms 级（与 FlashAttention、batch 有关）
+- Decode TPOT：几十 ms/token 级（memory-bound，batch 越大 often 越低）
+
+**Decode 吞吐粗算**：
+
+```
+throughput (tok/s) ≈ batch_size / TPOT    # 同一 decode step 的有效 batch
+```
+
+**用户体感**：
+
+- 「第一个字慢」→ 查 **TTFT**（Prefill、排队、超长 prompt）
+- 「后面一个字一个字慢」→ 查 **TPOT**（Decode、KV、Speculative）
+
+---
+
 **准备动作**：
 
 1. 精读 [chapter_08](chapter_08_inference_pipeline.md)
