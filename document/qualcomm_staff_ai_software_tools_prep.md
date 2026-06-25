@@ -70,6 +70,191 @@ Snapdragon NPU / GPU / CPU
 - LLM 权重量化（GPTQ/AWQ）与激活量化的差异？
 - 端侧 NPU 为何偏爱 **INT8/INT4** 和 **对称量化**？
 
+#### 面试参考答案
+
+##### Q1. INT8 动态量化 vs 静态量化 vs QAT 区别与选型？
+
+三者都属于 **量化**，但 **何时算 scale、要不要校准、要不要重训** 不同：
+
+| | **动态量化（Dynamic PTQ）** | **静态量化（Static PTQ）** | **QAT（量化感知训练）** |
+|--|----------------------------|---------------------------|------------------------|
+| **时机** | 训练后，开箱即用 | 训练后 + **校准（calibration）** | **训练过程中** 模拟量化 |
+| **权重** | 离线转 INT8 | 离线转 INT8 | 学习适应量化误差 |
+| **激活 scale** | 推理时 **现算**（per-tensor 动态） | 校准集上 **预先统计** 固定 scale | 训练中学出更稳的 scale |
+| **需要校准集** | 否 | **是**（几百～几千条代表性样本） | 是（训练集） |
+| **实现成本** | 最低 | 中等 | 最高（要重训或微调） |
+| **精度** | 一般够用 | 通常优于动态 | **最好** |
+| **加速场景** | 传统 CV、小模型、**CPU** | NPU/GPU 固定图、端侧部署 | 精度敏感、量化难收敛的模型 |
+| **典型 API** | `torch.quantization.quantize_dynamic` | ONNX Runtime QDQ、AIMET PTQ | AIMET QAT、PyTorch QAT |
+
+**量化公式（对称 INT8，最常见）**：
+
+```
+quantized = round( float_value / scale )   # scale 由 max(abs) 或校准统计得到
+dequant   = quantized * scale
+```
+
+**选型决策树（面试可直接画）**：
+
+```
+有训练资源且精度要求高？
+  ├─ 是 → QAT
+  └─ 否 → 部署目标是谁？
+           ├─ NPU / 固定 INT8 图 → Static PTQ + 校准集 + QDQ
+           ├─ 快速试 CPU 推理 → Dynamic PTQ
+           └─ LLM 大模型 → 权重量化 GPTQ/AWQ（见 Q3），激活另议
+```
+
+**与 PTQ 的关系**：动态、静态都是 **PTQ（Post-Training Quantization，训练后量化）**；QAT 不是 PTQ，要动训练图。
+
+---
+
+##### Q2. 量化后精度掉太多怎么排查？
+
+按 **从外到内、从易到难** 的顺序排查：
+
+**Step 1 — 确认基准与评测**
+
+- FP32/FP16 **基线指标** 是否可靠（同一验证集、同一预处理）
+- 看 **整体指标**（Accuracy/F1/PPL）还是 **逐层 max diff**（`assert_allclose` 阈值）
+
+**Step 2 — 校准集（Static PTQ / LLM 权重量化）**
+
+| 问题 | 处理 |
+|------|------|
+| 校准集太小或不代表真实分布 | 换 **覆盖业务场景** 的数据（几百～2k 条常见） |
+| 校准集与线上分布偏移 | 用 **生产日志脱敏样本** 或合成边界 case |
+| 只校准了中间层激活、没覆盖极端 token | LLM 用 **多样化 prompt 长度与主题** |
+
+**Step 3 — 粒度：per-tensor vs per-channel**
+
+| | **per-tensor**（整层一个 scale） | **per-channel**（每输出通道一个 scale） |
+|--|----------------------------------|----------------------------------------|
+| 优点 | 实现简单、NPU 友好 | **精度明显更好**（卷积/Linear 权重量化常用） |
+| 缺点 | 通道间动态范围差异大时误差大 | 略增 metadata、部分老硬件只支持 per-tensor |
+
+→ 精度掉在 **Conv/Linear 权重** 上时，优先试 **per-channel weight quant**。
+
+**Step 4 — 敏感层保持 FP16（混合精度）**
+
+常见 **不量化或保留 FP16** 的层：
+
+- **Embedding**、**LayerNorm / RMSNorm**
+- **Softmax** 前后、**Attention** 累加路径
+- 输出头 **lm_head**（LLM 对 logits 敏感）
+- 量化后 **单层 max diff 突增** 的层（逐层对比定位）
+
+策略：**Quantize + FP16 fallback 混合图**（QNN/ORT 支持部分层高精度）。
+
+**Step 5 — 对称 vs 非对称、INT8 vs INT4**
+
+- 激活分布 **明显非对称**（大量正值、ReLU 后）→ 试 **非对称量化**（zero-point ≠ 0）
+- INT4 再掉精度 → 回退 **INT8** 或 **敏感层 INT8 + 其余 INT4**
+
+**Step 6 — 部署链数值对不齐（Qualcomm 常考）**
+
+```
+PyTorch FP32  →  ONNX  →  ORT CPU  →  QNN HTP INT8
+```
+
+- 若 ORT CPU INT8 准、NPU 不准 → 查 **QDQ 节点、scale 导出、layout（NCHW/NHWC）**
+- 若从第一步就偏 → 查 **export 算子替换、fusion 改变计算顺序**
+
+**排查口诀**：**校准集 → per-channel → 敏感层 FP16 → 降 bit 或换 QAT → 逐层 golden 对比**。
+
+---
+
+##### Q3. LLM 权重量化（GPTQ/AWQ）与激活量化的差异？
+
+LLM 推理里 **权重巨大、激活随 batch/seq 变化** — 业界常 **先重度量化权重**，激活策略分开考虑。
+
+| | **权重量化（Weight-only）** | **激活量化（Activation quant）** |
+|--|---------------------------|----------------------------------|
+| **量化对象** | 主要 **W**（Attention、FFN 的 Linear） | 每层 **中间激活**（matmul 输入/输出） |
+| **典型方法** | **GPTQ**、**AWQ**、GGUF Q4_K | SmoothQuant、静态 PTQ、W8A8 |
+| **是否需要校准** | 需要（GPTQ/AWQ 用少量样本估 Hessian 或 saliency） | 静态激活量化 **必须校准** |
+| **内存收益** | **极大**（7B FP16 ~14GB → INT4 ~4GB） | 主要减 **运行时激活 buffer**（相对权重次要） |
+| **精度影响** | 做得好 PPL 掉很少 | 更难，易掉精度（outlier 激活） |
+| **Decode 特点** | 权重 **反复读** → 权重量化直接减 **带宽** | 激活每步变化 → 动态范围难估 |
+
+**GPTQ vs AWQ（权重量化内部对比）**：
+
+| | **GPTQ** | **AWQ** |
+|--|----------|---------|
+| **思路** | 用 Hessian 近似，逐列量化并误差补偿 | 认为 **少量 salient 权重** 更重要，保护 + 缩放激活 |
+| **优点** | 成熟、工具链多 | 往往 **同样 bit 下精度更好** |
+| **场景** | 通用 W4 权重 | 端侧/推理库常见（与 vLLM、llama.cpp 生态结合多） |
+
+**常见组合（面试常问）**：
+
+| 方案 | 说明 |
+|------|------|
+| **W4A16**（GPTQ/AWQ + FP16 激活） | **最常用**：权重 INT4，激活 FP16；实现简单、精度好 |
+| **W8A8** | 权重+激活都 INT8；更快更省，但 LLM 激活 outlier 多，要校准/SmoothQuant |
+| **W4A8** | 更激进，端侧极致压缩 |
+
+**一句话**：
+
+> **GPTQ/AWQ 解决「模型太大装不下、Decode 读权重太慢」；激活量化解决「矩阵乘算子能否走 INT8 管线」— LLM 优先权重量化，激活量化是进阶选项。**
+
+---
+
+##### Q4. 端侧 NPU 为何偏爱 INT8/INT4 和对称量化？
+
+**为何 INT8 / INT4？**
+
+| 原因 | 说明 |
+|------|------|
+| **硬件电路** | HTP/Hexagon NPU 有 **定点 MAC（乘累加）** 单元，INT8/INT4 吞吐远高于 FP16 |
+| **功耗** | 低位宽 → 更少晶体管翻转、更低 **DRAM 带宽**（手机电池/发热硬约束） |
+| **内存** | 7B 模型 FP16 ~14GB，手机装不下；INT4 ~3.5–4GB 才可部署 |
+| **已验证生态** | QNN/AIMET/AI Hub 默认路径就是 **INT8 权重量化 + HTP** |
+
+**为何常选对称量化（Symmetric）？**
+
+对称：量化范围 **关于 0 对称**，`zero_point = 0`：
+
+```
+scale = max(abs(tensor)) / 127     # INT8
+q = round( x / scale )
+x ≈ q * scale
+```
+
+| | **对称（Symmetric）** | **非对称（Asymmetric）** |
+|--|----------------------|-------------------------|
+| **zero-point** | 固定为 0 | 可非 0，覆盖 [min, max] |
+| **硬件** | **只需乘 scale**，无 zero-point 偏移项 → NPU 电路更简单 | 多一项 offset，略复杂 |
+| **适用** | 权重分布近似对称、经过 Norm 后的激活 | ReLU 后全非负等偏态分布 |
+| **端侧偏好** | **HTP 默认/优先路径** | 可用但支持度、性能可能不如对称 |
+
+**NPU 还偏爱什么（可一并讲）**：
+
+- **per-channel 权重量化** + **per-tensor 激活**（W8A8 常见组合）
+- **离线 compile**：scale 固定进 graph，runtime **不做动态搜 max**
+- **算子融合后的 QDQ**：`Q → DQ → MatMul` 融合进一个 HTP kernel
+
+**端侧 vs 云端对比（Qualcomm 差异化）**：
+
+| | 云端 GPU | 端侧 HTP |
+|--|----------|----------|
+| FP16 Tensor Core | 成熟高效 | 不如 INT 矩阵单元划算 |
+| 动态量化 | 有时可行 | **更喜静态 scale、固定 shape** |
+| 目标 | 吞吐 | **功耗 + 内存 + 延迟** |
+
+**白板一句话**：
+
+> **NPU 为 INT 矩阵乘而生；INT8/INT4 省内存和带宽；对称量化省硬件开销、与 HTP 定点 datapath 最合拍。**
+
+**手算例题（面试可能问）**：
+
+```
+7B 参数 × FP16 (2 bytes) ≈ 14 GB 权重
+7B 参数 × INT8 (1 byte)  ≈ 7 GB
+7B 参数 × INT4 (0.5 byte) ≈ 3.5 GB
+```
+
+---
+
 **准备动作**：
 
 1. 精读 [chapter_07](chapter_07_model_quantization.md)，能讲清 **基准 → 量化 → 四项 ratio**
