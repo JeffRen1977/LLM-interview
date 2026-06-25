@@ -6,6 +6,8 @@
 
 本文档将 JD 拆解为 **知识地图 → 本仓库对齐 → 缺口补强 → 面试题型 → 4 周准备计划**。
 
+**动手实验**：[`qualcomm/`](../qualcomm/README.md) 目录含 10 个可运行 Lab（ONNX / ORT / 量化 / 图划分 / LLM / MoE / LoRA / debug / 端到端）+ C++ QNN stub，对应下文各 § 技能点。
+
 ---
 
 ## 1. 岗位本质（面试前先建立心智模型）
@@ -709,6 +711,7 @@ JD 明确要求 **mentor、design review、跨团队、Director 沟通**。
 
 | 主题 | 文档 | 代码 |
 |------|------|------|
+| **Qualcomm 动手 Lab** | [qualcomm/README.md](../qualcomm/README.md) | `qualcomm/lab_01` … `lab_10`, `run_all.py` |
 | 量化 | [chapter_07](chapter_07_model_quantization.md) | `basic/chapter_07_model_quantization.py` |
 | 推理流水线 | [chapter_08](chapter_08_inference_pipeline.md) | `basic/chapter_08_inference_pipeline.py` |
 | FlashAttn / Fusion | [chapter_09](chapter_09_flash_attention_operator_fusion.md) | `basic/chapter_09_flash_attention_operator_fusion.py` |
@@ -716,7 +719,6 @@ JD 明确要求 **mentor、design review、跨团队、Director 沟通**。
 | Speculative | [chapter_11](chapter_11_speculative_decoding.md) | `basic/chapter_11_speculative_decoding.py` |
 | 监控 SLA | [chapter_12](chapter_12_inference_monitoring_sla.md) | `basic/chapter_12_inference_monitoring_sla.py` |
 | 训练 / LoRA | [chapter_13](chapter_13_memory_efficient_training.md) | `basic/chapter_13_memory_efficient_training.py` |
-| 评估 | [chapter_15](chapter_15_llm_evaluation_framework.md) | `basic/chapter_15_llm_evaluation_framework.py` |
 | 评估 | [chapter_15](chapter_15_llm_evaluation_framework.md) | `basic/chapter_15_llm_evaluation_framework.py` |
 | MoE 概念 | **§11**（本文档） | `basic/chapter_16_moe_inference.py` |
 | OpenAI 面试题 | — | `openAI/openAI_questions.md` |
